@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fix Mumbai — Report Garbage, Tag Your Neta</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════ */
+    :root {
+      --blue:        #0B3D91;
+      --blue-light:  #2F6FED;
+      --blue-subtle: #EEF4FF;
+      --success:     #16A34A;
+      --success-bg:  #DCFCE7;
+      --warning:     #F59E0B;
+      --warning-bg:  #FEF3C7;
+      --error:       #DC2626;
+      --error-bg:    #FEE2E2;
+      --info:        #3B82F6;
+      --info-bg:     #DBEAFE;
+
+      --white:       #FFFFFF;
+      --bg:          #F5F7FA;
+      --surface:     #FFFFFF;
+      --border:      #D1D5DB;
+      --border-soft: #E5E7EB;
+      --text:        #1F2937;
+      --text-muted:  #6B7280;
+      --text-light:  #9CA3AF;
+
+      --font-head:   'Poppins', sans-serif;
+      --font-body:   'Inter', sans-serif;
+
+      --r-sm:  8px;
+      --r-md:  12px;
+      --r-lg:  16px;
+      --r-xl:  20px;
+      --r-full: 100px;
+
+      --sh-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --sh-md: 0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
+      --sh-lg: 0 10px 20px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04);
+      --sh-xl: 0 20px 30px rgba(0,0,0,0.10), 0 8px 12px rgba(0,0,0,0.05);
+    }
+
+    /* ═══════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    *:focus-visible { outline: 2px solid var(--blue-light); outline-offset: 2px; border-radius: 4px; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ═══════════════════════════════════════
+       TYPOGRAPHY
+    ═══════════════════════════════════════ */
+    .h1 { font-family: var(--font-head); font-size: 36px; font-weight: 700; line-height: 1.1; }
+    .h2 { font-family: var(--font-head); font-size: 24px; font-weight: 600; line-height: 1.2; }
+    .h3 { font-family: var(--font-head); font-size: 18px; font-weight: 600; line-height: 1.3; }
+    .body-text { font-family: var(--font-body); font-size: 16px; font-weight: 400; line-height: 1.6; }
+    .caption { font-family: var(--font-body); font-size: 12px; font-weight: 500; line-height: 1.4; }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
+    header {
+      background: var(--blue);
+      height: 64px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 1000;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(11,61,145,0.25);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .brand-icon {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.15);
+      border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .brand-text { line-height: 1; }
+    .brand-name {
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--white);
+      letter-spacing: -0.3px;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: rgba(255,255,255,0.65);
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    /* Pill nav */
+    .header-nav {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: var(--r-full);
+      padding: 4px;
+      gap: 2px;
+    }
+
+    .nav-btn {
+      padding: 7px 18px;
+      border-radius: var(--r-full);
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.75);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .nav-btn:hover { color: white; background: rgba(255,255,255,0.1); }
+    .nav-btn.active { background: var(--white); color: var(--blue); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .helpline-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: var(--r-full);
+      color: rgba(255,255,255,0.9);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      background: #4ADE80;
+      border-radius: 50%;
+      animation: livePulse 1.8s infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .btn-cta {
+      background: var(--white);
+      color: var(--blue);
+      border: none;
+      padding: 9px 20px;
+      border-radius: var(--r-full);
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.15s;
+      box-shadow: var(--sh-sm);
+    }
+
+    .btn-cta:hover {
+      background: #EEF4FF;
+      transform: translateY(-1px);
+      box-shadow: var(--sh-md);
+    }
+
+    .btn-cta.cancel-mode {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    /* ═══════════════════════════════════════
+       LAYOUT: MAP VIEW
+    ═══════════════════════════════════════ */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* PAGE wrapper */
+    .page { display: none; flex: 1; overflow: hidden; }
+    .page.active { display: flex; }
+
+    /* ═══════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════ */
+    .sidebar {
+      width: 360px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Stats row */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border-soft);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .stat-cell {
+      background: var(--surface);
+      padding: 16px 14px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 26px;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .stat-num.red   { color: var(--error); }
+    .stat-num.green { color: var(--success); }
+
+    .stat-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    /* Filter row */
+    .filter-bar {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .filter-label {
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .filter-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 5px 13px;
+      border-radius: var(--r-full);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .chip:hover { border-color: var(--blue); color: var(--blue); }
+    .chip.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+    .chip-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .chip-dot.error   { background: var(--error); }
+    .chip-dot.warning { background: var(--warning); }
+    .chip-dot.success { background: var(--success); }
+
+    /* Card list */
+    .card-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .card-list::-webkit-scrollbar { width: 5px; }
+    .card-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .report-card {
+      padding: 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--border-soft);
+      border-radius: var(--r-md);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .report-card:hover {
+      border-color: var(--blue-light);
+      box-shadow: var(--sh-md);
+      transform: translateY(-1px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .card-cat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+
+    .cat-bubble {
+      width: 32px; height: 32px;
+      border-radius: var(--r-sm);
+      background: var(--blue-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .badge {
+      padding: 3px 9px;
+      border-radius: var(--r-full);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      flex-shrink: 0;
+    }
+
+    .badge.sev-critical { background: var(--error-bg);   color: #B91C1C; }
+    .badge.sev-severe   { background: #FFEDD5;            color: #C2410C; }
+    .badge.sev-moderate { background: var(--warning-bg);  color: #92400E; }
+    .badge.sev-minor    { background: var(--success-bg);  color: #065F46; }
+
+    .badge.st-reported     { background: var(--error-bg);   color: #B91C1C; }
+    .badge.st-acknowledged { background: var(--warning-bg); color: #92400E; }
+    .badge.st-resolved     { background: var(--success-bg); color: #065F46; }
+
+    .card-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-soft);
+      font-size: 11px;
+      color: var(--text-light);
+    }
+
+    .card-location {
+      color: var(--blue-light);
+      font-weight: 600;
+    }
+
+    .empty-state {
+      padding: 60px 30px;
+      text-align: center;
+    }
+
+    .empty-icon { font-size: 40px; opacity: 0.4; margin-bottom: 12px; }
+    .empty-title { font-family: var(--font-head); font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .empty-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ═══════════════════════════════════════
+       MAP
+    ═══════════════════════════════════════ */
+    .map-wrap { flex: 1; position: relative; }
+
+    #map { width: 100%; height: 100%; background: #E9EEF4; }
+
+    .map-overlay {
+      position: absolute;
+      top: 16px; left: 16px; right: 16px;
+      z-index: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+
+    .map-overlay > * { pointer-events: auto; }
+
+    .map-info-box {
+      background: var(--white);
+      padding: 10px 16px;
+      border-radius: var(--r-md);
+      box-shadow: var(--sh-md);
+      border: 1px solid var(--border-soft);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .map-info-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; }
+    .map-info-value { font-family: var(--font-head); font-weight: 600; font-size: 13px; color: var(--text); margin-top: 1px; }
+
+    .map-legend {
+      background: var(--white);
+      padding: 10px 14px;
+      border-radius: var(--r-md);
+      box-shadow: var(--sh-md);
+      border: 1px solid var(--border-soft);
+      display: flex;
+      gap: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .legend-pip {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .legend-pip.critical { background: var(--error); }
+    .legend-pip.severe   { background: #EA580C; }
+    .legend-pip.moderate { background: var(--warning); }
+    .legend-pip.minor    { background: var(--success); }
+
+    .map-pick-banner {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--blue);
+      color: white;
+      padding: 13px 26px;
+      border-radius: var(--r-full);
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 14px;
+      z-index: 600;
+      pointer-events: none;
+      display: none;
+      box-shadow: 0 8px 24px rgba(11,61,145,0.4);
+      animation: floatUp 1.8s ease-in-out infinite;
+    }
+
+    @keyframes floatUp {
+      0%, 100% { transform: translate(-50%, 0); }
+      50%       { transform: translate(-50%, -6px); }
+    }
+
+    /* ═══════════════════════════════════════
+       STATS PAGE
+    ═══════════════════════════════════════ */
+    #stats-page {
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .stats-container {
+      max-width: 1080px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 28px 60px;
+    }
+
+    .page-heading {
+      font-family: var(--font-head);
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .page-sub {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 44px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border-soft);
+      border-radius: var(--r-lg);
+      padding: 22px 20px;
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .kpi-num {
+      font-family: var(--font-head);
+      font-size: 44px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .kpi-num.blue  { color: var(--blue-light); }
+    .kpi-num.red   { color: var(--error); }
+    .kpi-num.green { color: var(--success); }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 6px;
+    }
+
+    .section-head {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+      margin-top: 36px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Leaderboard table */
+    .lb-table {
+      background: var(--surface);
+      border: 1.5px solid var(--border-soft);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+
+    .lb-header {
+      display: grid;
+      grid-template-columns: 44px 1fr 80px 120px;
+      gap: 12px;
+      padding: 10px 18px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .lb-header-cell {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+    }
+
+    .lb-row {
+      display: grid;
+      grid-template-columns: 44px 1fr 80px 120px;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-soft);
+      transition: background 0.1s;
+    }
+
+    .lb-row:last-child { border-bottom: none; }
+    .lb-row:hover { background: var(--bg); }
+
+    .lb-rank {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .lb-ward-name {
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+
+    .lb-ward-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .lb-count {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--text);
+      text-align: right;
+    }
+
+    .lb-bar-track {
+      height: 6px;
+      background: var(--border-soft);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .lb-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--blue-light));
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    /* Party grid */
+    .party-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 12px;
+    }
+
+    .party-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border-soft);
+      border-radius: var(--r-md);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .party-badge {
+      width: 36px; height: 36px;
+      border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .party-BJP      { background: #EA580C; }
+    .party-INC      { background: #1D4ED8; }
+    .party-SSUBT    { background: #7C3AED; }
+    .party-ShivSena { background: #CA8A04; }
+    .party-NCP      { background: #059669; }
+    .party-SP       { background: #DC2626; }
+    .party-other    { background: #6B7280; }
+
+    .party-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--r-full);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .ptag-BJP      { background: #FFEDD5; color: #9A3412; }
+    .ptag-INC      { background: var(--info-bg); color: #1E3A8A; }
+    .ptag-SSUBT    { background: #EDE9FE; color: #5B21B6; }
+    .ptag-ShivSena { background: var(--warning-bg); color: #78350F; }
+    .ptag-NCP      { background: var(--success-bg); color: #14532D; }
+    .ptag-SP       { background: var(--error-bg); color: #991B1B; }
+    .ptag-other    { background: var(--bg); color: var(--text-muted); }
+
+    /* ═══════════════════════════════════════
+       MODALS
+    ═══════════════════════════════════════ */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--r-xl);
+      width: 100%;
+      max-width: 500px;
+      max-height: calc(100vh - 40px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(24px) scale(0.97);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: var(--sh-xl);
+    }
+
+    .overlay.open .modal { transform: translateY(0) scale(1); }
+
+    .modal-close {
+      position: absolute;
+      top: 14px; right: 14px;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+      z-index: 10;
+    }
+
+    .modal-close:hover { background: rgba(255,255,255,0.35); }
+
+    /* Report form modal */
+    .modal-header {
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .modal-title {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    .modal-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-body::-webkit-scrollbar { width: 5px; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .form-group { margin-bottom: 18px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    label .req { color: var(--error); }
+    label .opt { color: var(--text-light); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+    .seg-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .seg-grid.sev { grid-template-columns: repeat(4, 1fr); }
+
+    .seg-btn {
+      padding: 10px 6px;
+      border-radius: var(--r-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.3;
+      text-align: center;
+    }
+
+    .seg-btn-emoji { font-size: 18px; }
+
+    .seg-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    .seg-btn.selected { border-color: var(--blue); background: var(--blue); color: white; }
+
+    .sev-btn.selected[data-sev="critical"] { border-color: var(--error);   background: var(--error);   color: white; }
+    .sev-btn.selected[data-sev="severe"]   { border-color: #EA580C; background: #EA580C; color: white; }
+    .sev-btn.selected[data-sev="moderate"] { border-color: var(--warning); background: var(--warning); color: white; }
+    .sev-btn.selected[data-sev="minor"]    { border-color: var(--success); background: var(--success); color: white; }
+
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 11px 14px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      transition: all 0.15s;
+      resize: vertical;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--blue-light);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(47,111,237,0.12);
+    }
+
+    textarea { min-height: 80px; }
+
+    /* Auto-tag preview inside form */
+    .autotag-box {
+      padding: 14px;
+      background: var(--blue-subtle);
+      border: 1px solid #BFDBFE;
+      border-radius: var(--r-md);
+      margin-top: 6px;
+    }
+
+    .autotag-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--blue);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .autotag-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .autotag-cell {
+      background: var(--white);
+      padding: 9px 11px;
+      border-radius: var(--r-sm);
+    }
+
+    .autotag-role { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); font-weight: 700; }
+    .autotag-name { font-family: var(--font-head); font-weight: 600; font-size: 12px; color: var(--text); margin-top: 2px; line-height: 1.3; }
+
+    .modal-footer {
+      padding: 14px 24px 20px;
+      border-top: 1px solid var(--border-soft);
+      background: var(--bg);
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-ghost {
+      flex: 1;
+      padding: 11px;
+      border-radius: var(--r-sm);
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-ghost:hover { border-color: var(--text); }
+
+    .btn-primary {
+      flex: 2;
+      padding: 11px;
+      border-radius: var(--r-sm);
+      border: none;
+      background: var(--blue);
+      color: white;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 2px 8px rgba(11,61,145,0.25);
+    }
+
+    .btn-primary:hover { background: #0A2F70; box-shadow: 0 4px 12px rgba(11,61,145,0.35); }
+
+    /* ═══════════════════════════════════════
+       DETAIL / SUCCESS MODAL
+    ═══════════════════════════════════════ */
+    .detail-hero {
+      padding: 26px 26px 22px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .detail-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%; right: -15%;
+      width: 220px; height: 220px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%;
+    }
+
+    .detail-hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%; left: -10%;
+      width: 160px; height: 160px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 50%;
+    }
+
+    .detail-hero-content { position: relative; z-index: 1; }
+
+    .success-ring {
+      width: 48px; height: 48px;
+      background: var(--white);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    }
+
+    .detail-hero h2 {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: -0.2px;
+      margin-bottom: 4px;
+    }
+
+    .detail-hero p { font-size: 13px; opacity: 0.9; line-height: 1.4; }
+
+    /* Status stepper */
+    .stepper {
+      margin: 20px 24px;
+      padding: 14px;
+      background: var(--bg);
+      border-radius: var(--r-md);
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .stepper-line {
+      position: absolute;
+      top: 26px;
+      left: 16%;
+      right: 16%;
+      height: 2px;
+      background: var(--border);
+    }
+
+    .step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-dot {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--white);
+      border: 2px solid var(--border);
+      margin: 0 auto 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .step.done .step-dot { background: var(--success); border-color: var(--success); color: white; }
+
+    .step-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+    }
+
+    .step.done .step-label { color: var(--success); }
+
+    /* Authority block inside detail */
+    .authority-block {
+      margin: 0 24px 16px;
+      padding: 18px;
+      background: var(--bg);
+      border: 1.5px solid var(--border-soft);
+      border-radius: var(--r-lg);
+    }
+
+    .authority-block-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .authority-block-title { font-family: var(--font-head); font-weight: 700; font-size: 15px; color: var(--text); }
+    .authority-block-sub   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    .person-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--white);
+      border-radius: var(--r-sm);
+      margin-bottom: 8px;
+    }
+
+    .person-row:last-child { margin-bottom: 0; }
+
+    .person-avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--blue-light));
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .person-role { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--text-muted); }
+    .person-name { font-family: var(--font-head); font-weight: 600; font-size: 14px; color: var(--text); margin-top: 1px; line-height: 1.2; }
+    .person-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 24px 16px;
+    }
+
+    .action-btn {
+      padding: 11px;
+      border-radius: var(--r-sm);
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-1px); }
+    .action-btn.full-col { grid-column: 1 / -1; }
+
+    .action-btn.tweet:hover { background: #000; color: white; border-color: #000; }
+
+    .action-btn.call-btn {
+      background: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
+
+    .action-btn.call-btn:hover { background: #15803D; border-color: #15803D; }
+
+    .action-btn.resolve-btn {
+      background: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
+
+    .action-btn.danger-btn {
+      background: var(--error-bg);
+      color: #B91C1C;
+      border-color: #FECACA;
+    }
+
+    /* ═══════════════════════════════════════
+       POPUP
+    ═══════════════════════════════════════ */
+    .leaflet-popup-content-wrapper {
+      border-radius: var(--r-md) !important;
+      box-shadow: var(--sh-xl) !important;
+      border: 1px solid var(--border-soft) !important;
+      padding: 0 !important;
+    }
+
+    .leaflet-popup-content { margin: 0 !important; width: 270px !important; }
+
+    .popup-box { font-family: var(--font-body); padding: 14px; }
+
+    .popup-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+
+    .popup-cat { font-family: var(--font-head); font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+    .popup-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px; }
+
+    .popup-tag-box {
+      padding: 9px 11px;
+      background: var(--blue-subtle);
+      border-radius: var(--r-sm);
+      margin-bottom: 10px;
+    }
+
+    .popup-tag-lbl { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--blue); }
+    .popup-tag-name { font-family: var(--font-head); font-weight: 600; font-size: 12.5px; color: var(--text); margin-top: 2px; }
+    .popup-tag-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    .popup-btn {
+      width: 100%;
+      padding: 8px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: var(--r-sm);
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .popup-btn:hover { background: #0A2F70; }
+
+    /* ═══════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════ */
+    .toast {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translate(-50%, -20px);
+      background: var(--text);
+      color: white;
+      padding: 11px 20px;
+      border-radius: var(--r-full);
+      font-weight: 600;
+      font-size: 13px;
+      z-index: 3000;
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: var(--sh-lg);
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .helpline-pill span.htext { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar        { display: none; }
+      header          { padding: 0 16px; }
+      .brand-sub      { display: none; }
+      .header-nav     { gap: 1px; }
+      .nav-btn        { padding: 6px 12px; font-size: 12px; }
+      .helpline-pill  { display: none; }
+      .btn-cta .cta-text { display: none; }
+      .stats-container { padding: 24px 16px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     HEADER
+═══════════════════════════════════ -->
+<header>
+  <div class="brand" onclick="showPage('map')">
+    <div class="brand-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">Fix Mumbai</div>
+      <div class="brand-sub">Report. Tag. Resolve.</div>
+    </div>
+  </div>
+
+  <nav class="header-nav">
+    <button class="nav-btn active" data-page="map"   onclick="showPage('map')">🗺 Map</button>
+    <button class="nav-btn"        data-page="stats" onclick="showPage('stats')">📊 Stats</button>
+  </nav>
+
+  <div class="header-right">
+    <div class="helpline-pill">
+      <span class="live-dot"></span>
+      <span class="htext">BMC Helpline &nbsp;</span>
+      <strong>1916</strong>
+    </div>
+    <button class="btn-cta" id="report-btn" onclick="togglePickMode()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="cta-text">Report Garbage</span>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════
+     MAIN AREA
+═══════════════════════════════════ -->
+<div class="main">
+
+  <!-- ════ MAP PAGE ════ -->
+  <div class="page active" id="map-page">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="stat-row">
+        <div class="stat-cell">
+          <div class="stat-num blue" id="s-total">0</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-num red" id="s-critical">0</div>
+          <div class="stat-lbl">Critical</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-num green" id="s-resolved">0</div>
+          <div class="stat-lbl">Resolved</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-label">
+          <span>Recent Reports</span>
+          <span id="filter-count" style="font-family:var(--font-body);font-weight:500;text-transform:none;letter-spacing:0;color:var(--text-light);font-size:11px">0 reports</span>
+        </div>
+        <div class="filter-chips">
+          <button class="chip active" data-f="all"      onclick="setFilter('all',this)">All</button>
+          <button class="chip"        data-f="critical"  onclick="setFilter('critical',this)"><span class="chip-dot error"></span>Critical</button>
+          <button class="chip"        data-f="severe"    onclick="setFilter('severe',this)"><span class="chip-dot" style="background:#EA580C"></span>Severe</button>
+          <button class="chip"        data-f="moderate"  onclick="setFilter('moderate',this)"><span class="chip-dot warning"></span>Moderate</button>
+          <button class="chip"        data-f="minor"     onclick="setFilter('minor',this)"><span class="chip-dot success"></span>Minor</button>
+        </div>
+      </div>
+
+      <div class="card-list" id="card-list"></div>
+    </aside>
+
+    <!-- Map -->
+    <div class="map-wrap">
+      <div id="map"></div>
+
+      <div class="map-overlay">
+        <div class="map-info-box">
+          <div>
+            <div class="map-info-label">Showing</div>
+            <div class="map-info-value">All Mumbai · 24 BMC Wards</div>
+          </div>
+        </div>
+        <div class="map-legend">
+          <div class="legend-item"><span class="legend-pip critical"></span>Critical</div>
+          <div class="legend-item"><span class="legend-pip severe"></span>Severe</div>
+          <div class="legend-item"><span class="legend-pip moderate"></span>Moderate</div>
+          <div class="legend-item"><span class="legend-pip minor"></span>Minor</div>
+        </div>
+      </div>
+
+      <div class="map-pick-banner" id="pick-banner">📍 Tap anywhere on the map to drop a pin</div>
+    </div>
+  </div>
+
+  <!-- ════ STATS PAGE ════ -->
+  <div class="page" id="stats-page">
+    <div class="stats-container">
+      <div class="page-heading">Stats</div>
+      <div class="page-sub">Accountability dashboard — 24 BMC Wards · Mayor: Ritu Tawde (BJP · Mahayuti)</div>
+
+      <div class="kpi-grid" id="kpi-grid"></div>
+
+      <div class="section-head">🏆 Ward Leaderboard</div>
+      <div class="lb-table" id="lb-table"></div>
+
+      <div class="section-head">🎯 Reports by Party</div>
+      <div class="party-grid" id="party-grid"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════════
+     REPORT FORM MODAL
+═══════════════════════════════════ -->
+<div class="overlay" id="report-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Report Garbage</div>
+      <div class="modal-subtitle" id="report-modal-sub">📍 Location pinned on map</div>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Category <span class="req">*</span></label>
+        <div class="seg-grid" id="cat-grid">
+          <button class="seg-btn selected" data-cat="Open Dump"     onclick="selectCat(this)"><span class="seg-btn-emoji">🪣</span>Open Dump</button>
+          <button class="seg-btn"          data-cat="Drain/Nala"    onclick="selectCat(this)"><span class="seg-btn-emoji">🌊</span>Drain/Nala</button>
+          <button class="seg-btn"          data-cat="Construction"  onclick="selectCat(this)"><span class="seg-btn-emoji">🏗️</span>Debris</button>
+          <button class="seg-btn"          data-cat="Plastic Waste" onclick="selectCat(this)"><span class="seg-btn-emoji">🧴</span>Plastic</button>
+          <button class="seg-btn"          data-cat="Food Waste"    onclick="selectCat(this)"><span class="seg-btn-emoji">🍚</span>Food</button>
+          <button class="seg-btn"          data-cat="Other"         onclick="selectCat(this)"><span class="seg-btn-emoji">📦</span>Other</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Severity <span class="req">*</span></label>
+        <div class="seg-grid sev" id="sev-grid">
+          <button class="seg-btn sev-btn" data-sev="critical" onclick="selectSev(this)"><span class="seg-btn-emoji">🔴</span>Critical</button>
+          <button class="seg-btn sev-btn" data-sev="severe"   onclick="selectSev(this)"><span class="seg-btn-emoji">🟠</span>Severe</button>
+          <button class="seg-btn sev-btn selected" data-sev="moderate" onclick="selectSev(this)"><span class="seg-btn-emoji">🟡</span>Moderate</button>
+          <button class="seg-btn sev-btn" data-sev="minor"   onclick="selectSev(this)"><span class="seg-btn-emoji">🟢</span>Minor</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nearest Landmark <span class="opt">(helps responders find it)</span></label>
+        <input type="text" id="landmark-input" placeholder="e.g. Behind Dadar TT bus stop" />
+      </div>
+
+      <div class="form-group">
+        <label>Details <span class="opt">(optional)</span></label>
+        <textarea id="desc-input" placeholder="Describe the dump — how long has it been there?"></textarea>
+      </div>
+
+      <div class="autotag-box">
+        <div class="autotag-label">⚡ These netas will be auto-tagged</div>
+        <div class="autotag-grid">
+          <div class="autotag-cell">
+            <div class="autotag-role">MLA · 2024</div>
+            <div class="autotag-name" id="preview-mla">—</div>
+          </div>
+          <div class="autotag-cell">
+            <div class="autotag-role">Corporator · 2026</div>
+            <div class="autotag-name" id="preview-corp">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('report-overlay')">Cancel</button>
+      <button class="btn-primary" onclick="submitReport()">Submit Report →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     DETAIL MODAL
+═══════════════════════════════════ -->
+<div class="overlay" id="detail-overlay">
+  <div class="modal" id="detail-modal-inner">
+    <!-- injected -->
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   WARD DATABASE — Sourced from Mumbai_Ultimate_Civic_Database_2026.xlsx
+   24 BMC wards · MLA (2024) · Corporator (2026) · Population
+═══════════════════════════════════════════════════════════ */
+const WARDS = [
+  { code:'A',   name:'Ward A',        localities:'Colaba, Fort, Cuffe Parade',    zone:'South', lat:18.9272, lng:72.8258, mla:'Rahul Narwekar',       mlaConst:'Colaba',      mlaParty:'BJP',       corp:'Makarand Narwekar',      corpParty:'BJP',       pop:185000  },
+  { code:'B',   name:'Ward B',        localities:'Sandhurst Road, Dongri',        zone:'South', lat:18.9555, lng:72.8362, mla:'Amin Patel',            mlaConst:'Mumbadevi',   mlaParty:'INC',       corp:'Amin Patel (Local Rep)', corpParty:'INC',       pop:127000  },
+  { code:'C',   name:'Ward C',        localities:'Kalbadevi, Marine Lines',       zone:'South', lat:18.9482, lng:72.8252, mla:'Amin Patel',            mlaConst:'Mumbadevi',   mlaParty:'INC',       corp:'Veena Jain',             corpParty:'BJP',       pop:166000  },
+  { code:'D',   name:'Ward D',        localities:'Malabar Hill, Grant Road',      zone:'South', lat:18.9634, lng:72.8122, mla:'Mangal Prabhat Lodha',  mlaConst:'Malabar Hill',mlaParty:'BJP',       corp:'Mangal P. Lodha (Rep)',  corpParty:'BJP',       pop:346000  },
+  { code:'E',   name:'Ward E',        localities:'Byculla, Mazgaon',             zone:'South', lat:18.9730, lng:72.8340, mla:'Manoj Jamsutkar',       mlaConst:'Byculla',     mlaParty:'SS (UBT)',  corp:'Manoj Jamsutkar (Rep)',   corpParty:'SS (UBT)', pop:393000  },
+  { code:'F/N', name:'Ward F North',  localities:'Sion, Matunga, Wadala',        zone:'South', lat:19.0300, lng:72.8600, mla:'Kalidas Kolambkar',     mlaConst:'Wadala',      mlaParty:'BJP',       corp:'Kalidas Kolambkar (Rep)', corpParty:'BJP',       pop:529000  },
+  { code:'F/S', name:'Ward F South',  localities:'Parel, Sewri',                 zone:'South', lat:19.0000, lng:72.8500, mla:'Ajay Choudhari',        mlaConst:'Shivadi',     mlaParty:'SS (UBT)',  corp:'Sunil More',              corpParty:'INC',       pop:360000  },
+  { code:'G/N', name:'Ward G North',  localities:'Dadar, Mahim, Dharavi',        zone:'South', lat:19.0350, lng:72.8400, mla:'Mahesh Sawant',         mlaConst:'Mahim',       mlaParty:'SS (UBT)',  corp:'Mahesh Sawant (Rep)',     corpParty:'SS (UBT)', pop:599000  },
+  { code:'G/S', name:'Ward G South',  localities:'Worli, Lower Parel',           zone:'South', lat:18.9950, lng:72.8250, mla:'Aditya Thackeray',      mlaConst:'Worli',       mlaParty:'SS (UBT)',  corp:'Aditya Thackeray (Rep)',  corpParty:'SS (UBT)', pop:422000  },
+  { code:'H/E', name:'Ward H East',   localities:'Bandra (E), Santacruz (E)',    zone:'West',  lat:19.0600, lng:72.8500, mla:'Varsha Gaikwad',        mlaConst:'Dharavi',     mlaParty:'INC',       corp:'Pooja Mahadeshwar',       corpParty:'SS (UBT)', pop:557000  },
+  { code:'H/W', name:'Ward H West',   localities:'Bandra (W), Khar (W)',         zone:'West',  lat:19.0550, lng:72.8300, mla:'Ashish Shelar',         mlaConst:'Bandra West', mlaParty:'BJP',       corp:'Ashish Shelar (Rep)',     corpParty:'BJP',       pop:307000  },
+  { code:'K/E', name:'Ward K East',   localities:'Andheri (E), Vile Parle (E)',  zone:'West',  lat:19.1150, lng:72.8600, mla:'Murji Patel',           mlaConst:'Andheri East',mlaParty:'Shiv Sena', corp:'Pramod Sawant',           corpParty:'SS (UBT)', pop:823000  },
+  { code:'K/W', name:'Ward K West',   localities:'Andheri (W), Versova',         zone:'West',  lat:19.1200, lng:72.8300, mla:'Ameet Satam',           mlaConst:'Andheri West',mlaParty:'BJP',       corp:'Shivanand Shetty',        corpParty:'BJP',       pop:748000  },
+  { code:'P/S', name:'Ward P South',  localities:'Goregaon West & East',         zone:'West',  lat:19.1600, lng:72.8400, mla:'Not Available',         mlaConst:'Goregaon',    mlaParty:'BJP',       corp:'Vikram Rajput',           corpParty:'BJP',       pop:463000  },
+  { code:'P/N', name:'Ward P North',  localities:'Malad West & East',            zone:'West',  lat:19.1800, lng:72.8400, mla:'Aslam Shaikh',          mlaConst:'Malad West',  mlaParty:'INC',       corp:'Geeta Bhandari',          corpParty:'SS (UBT)', pop:941000  },
+  { code:'R/S', name:'Ward R South',  localities:'Kandivali West & East',        zone:'West',  lat:19.2000, lng:72.8500, mla:'Yogesh Sagar',          mlaConst:'Kandivali E', mlaParty:'BJP',       corp:'Yogesh Sagar (Rep)',      corpParty:'BJP',       pop:691000  },
+  { code:'R/C', name:'Ward R Central',localities:'Borivali West & East',         zone:'West',  lat:19.2300, lng:72.8500, mla:'Sunil Rane',            mlaConst:'Borivali',    mlaParty:'BJP',       corp:'Shivanand Shetty',        corpParty:'BJP',       pop:562000  },
+  { code:'R/N', name:'Ward R North',  localities:'Dahisar',                      zone:'West',  lat:19.2500, lng:72.8600, mla:'Manisha Chaudhary',     mlaConst:'Dahisar',     mlaParty:'BJP',       corp:'Rekha Yadav',             corpParty:'Shiv Sena',pop:430000  },
+  { code:'L',   name:'Ward L',        localities:'Kurla, Sakinaka',              zone:'East',  lat:19.0700, lng:72.8800, mla:'Not Available',         mlaConst:'Kurla',       mlaParty:'Shiv Sena', corp:'Not Available',           corpParty:'Shiv Sena',pop:902000  },
+  { code:'M/E', name:'Ward M East',   localities:'Mankhurd, Govandi',            zone:'East',  lat:19.0500, lng:72.9300, mla:'Abu Azmi',              mlaConst:'Mankhurd',    mlaParty:'SP',        corp:'Abu Azmi (Rep)',          corpParty:'SP',        pop:807000  },
+  { code:'M/W', name:'Ward M West',   localities:'Chembur, Tilak Nagar',         zone:'East',  lat:19.0600, lng:72.9000, mla:'Not Available',         mlaConst:'Chembur',     mlaParty:'Shiv Sena', corp:'Not Available',           corpParty:'Shiv Sena',pop:411000  },
+  { code:'N',   name:'Ward N',        localities:'Ghatkopar, Vikhroli',          zone:'East',  lat:19.0800, lng:72.9100, mla:'Ram Kadam',             mlaConst:'Ghatkopar W', mlaParty:'BJP',       corp:'Ram Kadam (Rep)',         corpParty:'BJP',       pop:622000  },
+  { code:'S',   name:'Ward S',        localities:'Bhandup, Powai',               zone:'East',  lat:19.1400, lng:72.9300, mla:'Ashok Patil',           mlaConst:'Bhandup West',mlaParty:'Shiv Sena', corp:'Ashok Patil',             corpParty:'Shiv Sena',pop:743000  },
+  { code:'T',   name:'Ward T',        localities:'Mulund',                       zone:'East',  lat:19.1700, lng:72.9500, mla:'Mihir Kotecha',         mlaConst:'Mulund',      mlaParty:'BJP',       corp:'Mihir Kotecha (Rep)',     corpParty:'BJP',       pop:341000  },
+];
+
+const MAYOR = { name:'Ritu Tawde', party:'BJP', alliance:'Mahayuti (BJP + Shiv Sena)' };
+const CAT_EMOJI = { 'Open Dump':'🪣','Drain/Nala':'🌊','Construction':'🏗️','Plastic Waste':'🧴','Food Waste':'🍚','Other':'📦' };
+
+/* ── State ── */
+let reports = [];
+let mapMarkers = {};
+let activeFilter = 'all';
+let pickMode = false;
+let pendingLatLng = null;
+let selectedCat = 'Open Dump';
+let selectedSev = 'moderate';
+let currentPage = 'map';
+
+/* ── Nearest ward lookup ── */
+function findWard(lat, lng) {
+  let best = WARDS[0], minD = Infinity;
+  for (const w of WARDS) {
+    const d = Math.hypot(w.lat - lat, w.lng - lng);
+    if (d < minD) { minD = d; best = w; }
+  }
+  return best;
+}
+
+/* ═══ MAP ═══ */
+const map = L.map('map', { center:[19.076, 72.8777], zoom:12, zoomControl:false });
+L.control.zoom({ position:'bottomright' }).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OSM &copy; CARTO', subdomains:'abcd', maxZoom:20
+}).addTo(map);
+
+map.on('click', e => {
+  if (!pickMode) return;
+  pendingLatLng = e.latlng;
+  pickMode = false;
+  document.getElementById('pick-banner').style.display = 'none';
+  map.getContainer().style.cursor = '';
+  const btn = document.getElementById('report-btn');
+  btn.classList.remove('cancel-mode');
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg><span class="cta-text">Report Garbage</span>';
+  openReportModal(e.latlng);
+});
+
+/* ═══ MARKERS ═══ */
+function sevColor(s) {
+  return { critical:'#DC2626', severe:'#EA580C', moderate:'#F59E0B', minor:'#16A34A' }[s] || '#6B7280';
+}
+
+function makeIcon(sev) {
+  const c = sevColor(sev);
+  const svg = `<svg width="30" height="38" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg">
+    <defs><filter id="ds" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+    </filter></defs>
+    <path d="M15 0C6.716 0 0 6.716 0 15c0 10.5 15 23 15 23s15-12.5 15-23C30 6.716 23.284 0 15 0z"
+      fill="${c}" filter="url(#ds)"/>
+    <circle cx="15" cy="15" r="5.5" fill="white"/>
+  </svg>`;
+  return L.divIcon({ html:svg, iconSize:[30,38], iconAnchor:[15,38], popupAnchor:[0,-40], className:'' });
+}
+
+function renderMarkers() {
+  Object.values(mapMarkers).forEach(m => map.removeLayer(m));
+  mapMarkers = {};
+  const list = activeFilter === 'all' ? reports : reports.filter(r => r.severity === activeFilter);
+  list.forEach(r => {
+    const m = L.marker([r.lat, r.lng], { icon: makeIcon(r.severity) });
+    m.bindPopup(buildPopup(r), { maxWidth:270, minWidth:270 });
+    m.addTo(map);
+    mapMarkers[r.id] = m;
+  });
+}
+
+function buildPopup(r) {
+  const w = findWard(r.lat, r.lng);
+  return `
+    <div class="popup-box">
+      <div class="popup-top">
+        <div class="popup-cat">${CAT_EMOJI[r.category]||'📦'} ${r.category}</div>
+        <span class="badge sev-${r.severity}">${r.severity}</span>
+      </div>
+      ${r.landmark ? `<div style="font-size:11px;color:var(--blue-light);font-weight:600;margin-bottom:6px">📍 ${r.landmark}</div>` : ''}
+      ${r.description ? `<div class="popup-desc">${r.description}</div>` : ''}
+      <div class="popup-tag-box">
+        <div class="popup-tag-lbl">⚡ Auto-tagged</div>
+        <div class="popup-tag-name">${w.corp} <span class="party-tag ${pClass(w.corpParty)}" style="margin-left:4px">${w.corpParty}</span></div>
+        <div class="popup-tag-sub">${w.mla} · ${w.name}</div>
+      </div>
+      <button class="popup-btn" onclick="openDetail('${r.id}')">View full details →</button>
+    </div>`;
+}
+
+/* ═══ SIDEBAR LIST ═══ */
+function renderSidebar() {
+  const filtered = (activeFilter === 'all' ? [...reports] : reports.filter(r => r.severity === activeFilter))
+    .sort((a,b) => b.time - a.time);
+
+  document.getElementById('filter-count').textContent = `${filtered.length} report${filtered.length === 1 ? '' : 's'}`;
+
+  const el = document.getElementById('card-list');
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">No reports yet</div><div class="empty-text">Be the first to pin a garbage spot in Mumbai. Your local neta will be auto-tagged.</div></div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(r => {
+    const w = findWard(r.lat, r.lng);
+    return `
+      <div class="report-card" onclick="flyTo('${r.id}')">
+        <div class="card-top">
+          <div class="card-cat">
+            <div class="cat-bubble">${CAT_EMOJI[r.category]||'📦'}</div>
+            <div>
+              <div>${r.category}</div>
+              <div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-top:1px">${w.name}</div>
+            </div>
+          </div>
+          <span class="badge sev-${r.severity}">${r.severity}</span>
+        </div>
+        ${r.description ? `<div class="card-desc">${trunc(r.description,90)}</div>` : ''}
+        <div class="card-footer">
+          <span class="card-location">📍 ${r.landmark || w.localities}</span>
+          <span>${timeAgo(r.time)}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ═══ STATS ═══ */
+function renderStats() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const total    = reports.length;
+  const critical = reports.filter(r => r.severity === 'critical').length;
+  const resolved = reports.filter(r => r.status === 'resolved').length;
+  const todayN   = reports.filter(r => new Date(r.time) >= today).length;
+
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Reports</div><div class="kpi-num blue">${total}</div><div class="kpi-sub">across 24 BMC wards</div></div>
+    <div class="kpi-card"><div class="kpi-label">Critical</div><div class="kpi-num red">${critical}</div><div class="kpi-sub">need urgent action</div></div>
+    <div class="kpi-card"><div class="kpi-label">Resolved</div><div class="kpi-num green">${resolved}</div><div class="kpi-sub">${total ? Math.round(resolved/total*100) : 0}% resolution rate</div></div>
+    <div class="kpi-card"><div class="kpi-label">Today</div><div class="kpi-num">${todayN}</div><div class="kpi-sub">new in last 24 h</div></div>`;
+
+  // ward leaderboard
+  const counts = {};
+  reports.forEach(r => {
+    const w = findWard(r.lat, r.lng);
+    if (!counts[w.code]) counts[w.code] = { ward:w, count:0 };
+    counts[w.code].count++;
+  });
+  const ranked = Object.values(counts).sort((a,b) => b.count - a.count).slice(0, 12);
+  const maxC = ranked[0]?.count || 1;
+
+  document.getElementById('lb-table').innerHTML = `
+    <div class="lb-header">
+      <div class="lb-header-cell">#</div>
+      <div class="lb-header-cell">Ward</div>
+      <div class="lb-header-cell" style="text-align:right">Reports</div>
+      <div class="lb-header-cell">Share</div>
+    </div>
+    ${ranked.map((item, i) => `
+      <div class="lb-row">
+        <div class="lb-rank">${i+1}</div>
+        <div>
+          <div class="lb-ward-name">${item.ward.name} <span class="party-tag ${pClass(item.ward.corpParty)}" style="margin-left:4px">${item.ward.corpParty}</span></div>
+          <div class="lb-ward-sub">${item.ward.localities}</div>
+        </div>
+        <div class="lb-count">${item.count}</div>
+        <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${(item.count/maxC)*100}%"></div></div>
+      </div>
+    `).join('')}
+    ${!ranked.length ? '<div class="lb-row"><div></div><div style="color:var(--text-muted);font-size:13px;padding:8px 0">No reports yet — be the first!</div><div></div><div></div></div>' : ''}`;
+
+  // party breakdown
+  const partyCounts = {};
+  reports.forEach(r => {
+    const w = findWard(r.lat, r.lng);
+    const p = w.corpParty || 'Other';
+    partyCounts[p] = (partyCounts[p] || 0) + 1;
+  });
+  const parties = Object.entries(partyCounts).sort((a,b) => b[1]-a[1]);
+
+  document.getElementById('party-grid').innerHTML = parties.map(([p, c]) => `
+    <div class="party-card">
+      <div class="party-badge ${pBadgeClass(p)}">${partyInitials(p)}</div>
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:14px">${p}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${c} report${c===1?'':'s'}</div>
+      </div>
+    </div>`).join('') || `<div style="color:var(--text-muted);font-size:13px">No data yet.</div>`;
+}
+
+/* ═══ PICK MODE ═══ */
+function togglePickMode() {
+  pickMode = !pickMode;
+  const btn = document.getElementById('report-btn');
+  const banner = document.getElementById('pick-banner');
+
+  if (pickMode) {
+    showPage('map');
+    btn.classList.add('cancel-mode');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg><span class="cta-text">Cancel</span>';
+    banner.style.display = 'block';
+    map.getContainer().style.cursor = 'crosshair';
+  } else {
+    btn.classList.remove('cancel-mode');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg><span class="cta-text">Report Garbage</span>';
+    banner.style.display = 'none';
+    map.getContainer().style.cursor = '';
+  }
+}
+
+/* ═══ REPORT MODAL ═══ */
+function openReportModal(latlng) {
+  const w = findWard(latlng.lat, latlng.lng);
+  document.getElementById('report-modal-sub').textContent =
+    `📍 ${w.name} · ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+  document.getElementById('preview-mla').innerHTML  = `${w.mla} <span class="party-tag ${pClass(w.mlaParty)}">${w.mlaParty}</span>`;
+  document.getElementById('preview-corp').innerHTML = `${w.corp} <span class="party-tag ${pClass(w.corpParty)}">${w.corpParty}</span>`;
+  document.getElementById('landmark-input').value = '';
+  document.getElementById('desc-input').value = '';
+  document.getElementById('report-overlay').classList.add('open');
+}
+
+function submitReport() {
+  if (!pendingLatLng) return;
+  const r = {
+    id: 'r' + Date.now(),
+    lat: pendingLatLng.lat,
+    lng: pendingLatLng.lng,
+    category: selectedCat,
+    severity: selectedSev,
+    landmark: document.getElementById('landmark-input').value.trim(),
+    description: document.getElementById('desc-input').value.trim(),
+    time: Date.now(),
+    status: 'reported',
+  };
+  reports.unshift(r);
+  saveReports();
+  renderAll();
+  closeModal('report-overlay');
+  setTimeout(() => openDetail(r.id, true), 300);
+  toast('Report submitted ✓ neta auto-tagged', '📍');
+}
+
+/* ═══ DETAIL MODAL ═══ */
+function openDetail(id, isNew = false) {
+  const r = reports.find(x => x.id === id);
+  if (!r) return;
+  const w = findWard(r.lat, r.lng);
+
+  const statuses = ['reported','acknowledged','resolved'];
+  const stepIdx  = statuses.indexOf(r.status || 'reported');
+
+  const tweetTxt = encodeURIComponent(
+    `🚨 Garbage spotted at ${w.name} (${w.localities}), Mumbai, near "${r.landmark || w.localities}". @MumbaiBMC @MahaGovtMah — action needed!\n` +
+    `Corporator: ${w.corp} · MLA: ${w.mla} (${w.mlaParty})\nSeverity: ${r.severity.toUpperCase()}\n#FixMumbai #Mumbai`
+  );
+
+  document.getElementById('detail-modal-inner').innerHTML = `
+    <div class="detail-hero">
+      <button class="modal-close" onclick="closeModal('detail-overlay')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="detail-hero-content">
+        ${isNew ? `<div class="success-ring"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>` : ''}
+        <h2>${isNew ? 'Report filed!' : `${CAT_EMOJI[r.category]||'📦'} ${r.category}`}</h2>
+        <p>${isNew ? `Authorities for ${w.name} auto-tagged. Make some noise.` : `${w.name} · ${r.landmark || w.localities}`}</p>
+      </div>
+    </div>
+
+    <div class="stepper">
+      <div class="stepper-line"></div>
+      ${['Reported','Acknowledged','Resolved'].map((lbl,i) => `
+        <div class="step ${stepIdx >= i ? 'done' : ''}">
+          <div class="step-dot">${stepIdx >= i ? '✓' : i+1}</div>
+          <div class="step-label">${lbl}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="authority-block">
+      <div class="authority-block-head">
+        <div>
+          <div class="authority-block-title">Your elected netas</div>
+          <div class="authority-block-sub">${w.name} · ${w.zone} Mumbai · ${w.pop.toLocaleString('en-IN')} residents</div>
+        </div>
+      </div>
+
+      <div class="person-row">
+        <div class="person-avatar">${initials(w.corp)}</div>
+        <div>
+          <div class="person-role">Corporator · BMC 2026</div>
+          <div class="person-name">${w.corp}</div>
+          <div class="person-meta"><span class="party-tag ${pClass(w.corpParty)}">${w.corpParty}</span> · Nagar Sevak, ${w.name}</div>
+        </div>
+      </div>
+
+      <div class="person-row">
+        <div class="person-avatar">${initials(w.mla)}</div>
+        <div>
+          <div class="person-role">MLA · ${w.mlaConst} Constituency (2024)</div>
+          <div class="person-name">${w.mla}</div>
+          <div class="person-meta"><span class="party-tag ${pClass(w.mlaParty)}">${w.mlaParty}</span> · Maharashtra Legislature</div>
+        </div>
+      </div>
+
+      <div class="person-row">
+        <div class="person-avatar" style="background:linear-gradient(135deg,#0B3D91,#2F6FED)">${initials(MAYOR.name)}</div>
+        <div>
+          <div class="person-role">Mayor of Mumbai</div>
+          <div class="person-name">${MAYOR.name}</div>
+          <div class="person-meta"><span class="party-tag ${pClass(MAYOR.party)}">${MAYOR.party}</span> · ${MAYOR.alliance}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-grid">
+      <button class="action-btn tweet" onclick="window.open('https://twitter.com/intent/tweet?text=${tweetTxt}','_blank')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        Tag on X
+      </button>
+      <button class="action-btn call-btn" onclick="window.location.href='tel:1916'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+        Call 1916
+      </button>
+      ${r.status !== 'resolved' ? `
+        <button class="action-btn" onclick="updateStatus('${r.id}','${statuses[Math.min(stepIdx+1,2)]}')">
+          Mark as ${statuses[Math.min(stepIdx+1,2)]}
+        </button>
+        <button class="action-btn danger-btn" onclick="deleteReport('${r.id}')">
+          🗑 Delete
+        </button>
+      ` : `
+        <button class="action-btn resolve-btn full-col" onclick="closeModal('detail-overlay')">✓ Resolved — Close</button>
+      `}
+    </div>`;
+
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function updateStatus(id, newStatus) {
+  const r = reports.find(x => x.id === id);
+  if (!r) return;
+  r.status = newStatus;
+  saveReports();
+  renderAll();
+  closeModal('detail-overlay');
+  setTimeout(() => openDetail(id), 250);
+  toast(`Status: ${newStatus}`, '✓');
+}
+
+function deleteReport(id) {
+  if (!confirm('Delete this report? This cannot be undone.')) return;
+  reports = reports.filter(r => r.id !== id);
+  saveReports();
+  renderAll();
+  closeModal('detail-overlay');
+  toast('Report deleted', '🗑');
+}
+
+/* ═══ FILTERS ═══ */
+function setFilter(val, btn) {
+  activeFilter = val;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderMarkers();
+  renderSidebar();
+}
+
+function flyTo(id) {
+  const r = reports.find(x => x.id === id);
+  if (!r) return;
+  showPage('map');
+  map.flyTo([r.lat, r.lng], 16, { duration: 0.8 });
+  setTimeout(() => { if (mapMarkers[id]) mapMarkers[id].openPopup(); }, 850);
+}
+
+/* ═══ PAGES ═══ */
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(page + '-page').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+  if (page === 'map')   setTimeout(() => map.invalidateSize(), 50);
+  if (page === 'stats') renderStats();
+}
+
+/* ═══ MODAL HELPERS ═══ */
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.getElementById('report-overlay').addEventListener('click', e => { if (e.target.id === 'report-overlay') closeModal('report-overlay'); });
+document.getElementById('detail-overlay').addEventListener('click', e => { if (e.target.id === 'detail-overlay') closeModal('detail-overlay'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal('report-overlay'); closeModal('detail-overlay'); } });
+
+/* ═══ FORM CONTROLS ═══ */
+function selectCat(btn) {
+  document.querySelectorAll('#cat-grid .seg-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedCat = btn.dataset.cat;
+}
+
+function selectSev(btn) {
+  document.querySelectorAll('#sev-grid .seg-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedSev = btn.dataset.sev;
+}
+
+/* ═══ STORAGE ═══ */
+const STORE_KEY = 'fixmumbai-v3';
+
+function loadReports() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) { reports = JSON.parse(raw); } else { reports = seedReports(); saveReports(); }
+  } catch(e) { reports = seedReports(); }
+}
+
+function saveReports() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(reports)); } catch(e) {}
+}
+
+function seedReports() {
+  return [
+    { id:'s1', lat:19.0180, lng:72.8480, category:'Open Dump',     severity:'critical', landmark:'Dharavi 90 Feet Road',       description:'Massive waste pile blocking footpath, 3+ days old.', time:Date.now()-86400000*2,   status:'reported'     },
+    { id:'s2', lat:19.0400, lng:72.8420, category:'Drain/Nala',    severity:'critical', landmark:'Mahim Junction nala',         description:'Nala overflow with garbage — active mosquito breeding.', time:Date.now()-3600000*5,    status:'acknowledged' },
+    { id:'s3', lat:19.1210, lng:72.8610, category:'Plastic Waste', severity:'moderate', landmark:'Andheri East auto stand',     description:'Plastic bags accumulating near the rickshaw stand.',   time:Date.now()-3600000*2,    status:'reported'     },
+    { id:'s4', lat:18.9670, lng:72.8190, category:'Food Waste',    severity:'minor',    landmark:'Colaba Causeway',             description:'Food waste from evening street vendors.',               time:Date.now()-86400000,     status:'resolved'     },
+    { id:'s5', lat:19.0000, lng:72.8150, category:'Construction',  severity:'severe',   landmark:'Worli Sea Face roundabout',   description:'Construction debris dumped next to the sea face.',     time:Date.now()-3600000*8,    status:'reported'     },
+    { id:'s6', lat:19.2070, lng:72.8720, category:'Open Dump',     severity:'critical', landmark:'Kandivali East signal',       description:'Garbage pickup missed for an entire week.',             time:Date.now()-3600000*12,   status:'acknowledged' },
+    { id:'s7', lat:19.0830, lng:72.9180, category:'Plastic Waste', severity:'minor',    landmark:'Ghatkopar East market lane',  description:'Vendor plastic bags piling up daily.',                  time:Date.now()-3600000*18,   status:'resolved'     },
+    { id:'s8', lat:19.0550, lng:72.8360, category:'Open Dump',     severity:'severe',   landmark:'Bandra West corner lot',      description:'Daily illegal dumping at an empty plot.',               time:Date.now()-3600000*20,   status:'reported'     },
+  ];
+}
+
+/* ═══ STATS RENDER helper ═══ */
+function updateHeaderStats() {
+  document.getElementById('s-total').textContent    = reports.length;
+  document.getElementById('s-critical').textContent = reports.filter(r => r.severity === 'critical').length;
+  document.getElementById('s-resolved').textContent = reports.filter(r => r.status === 'resolved').length;
+}
+
+function renderAll() {
+  renderMarkers();
+  renderSidebar();
+  updateHeaderStats();
+}
+
+/* ═══ UTILS ═══ */
+function timeAgo(ts) {
+  const d = Date.now() - ts;
+  const m = Math.floor(d/60000), h = Math.floor(d/3600000), day = Math.floor(d/86400000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  return `${day}d ago`;
+}
+
+function trunc(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
+
+function initials(name) {
+  if (!name || name === 'Not Available') return '?';
+  return name.split(' ').slice(0,2).map(s => s[0]).join('').toUpperCase();
+}
+
+function pClass(party) {
+  const map = { 'BJP':'ptag-BJP','INC':'ptag-INC','SS (UBT)':'ptag-SSUBT','Shiv Sena':'ptag-ShivSena','NCP':'ptag-NCP','SP':'ptag-SP' };
+  return map[party] || 'ptag-other';
+}
+
+function pBadgeClass(party) {
+  const map = { 'BJP':'party-BJP','INC':'party-INC','SS (UBT)':'party-SSUBT','Shiv Sena':'party-ShivSena','NCP':'party-NCP','SP':'party-SP' };
+  return map[party] || 'party-other';
+}
+
+function partyInitials(p) {
+  return p.replace(/[^A-Z]/g,'').slice(0,3) || p.slice(0,2).toUpperCase();
+}
+
+let _toastTimer;
+function toast(msg, icon = '✓') {
+  const t = document.getElementById('toast');
+  t.innerHTML = `<span>${icon}</span> ${msg}`;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ═══ BOOT ═══ */
+loadReports();
+renderAll();
+</script>
+
+</body>
+</html>
