@@ -4,27 +4,46 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fix Mumbai — Report Garbage, Tag Your Neta</title>
+
+  <!-- Leaflet core -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <!-- Marker cluster plugin -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
   <style>
     :root {
       --blue:#0B3D91; --blue-light:#2F6FED; --blue-subtle:#EEF4FF;
       --success:#16A34A; --success-bg:#DCFCE7;
       --warning:#F59E0B; --warning-bg:#FEF3C7;
-      --error:#DC2626; --error-bg:#FEE2E2;
+      --error:#DC2626;   --error-bg:#FEE2E2;
       --white:#FFFFFF; --bg:#F5F7FA; --surface:#FFFFFF;
       --border:#D1D5DB; --border-soft:#E5E7EB;
       --text:#1F2937; --text-muted:#6B7280; --text-light:#9CA3AF;
       --font-head:'Poppins',sans-serif; --font-body:'Inter',sans-serif;
       --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:20px; --r-full:100px;
-      --sh-sm:0 1px 3px rgba(0,0,0,0.06); --sh-md:0 4px 6px rgba(0,0,0,0.07);
-      --sh-lg:0 10px 20px rgba(0,0,0,0.09); --sh-xl:0 20px 30px rgba(0,0,0,0.12);
+      --sh-sm:0 1px 3px rgba(0,0,0,0.06);
+      --sh-md:0 4px 6px rgba(0,0,0,0.07);
+      --sh-lg:0 10px 20px rgba(0,0,0,0.09);
+      --sh-xl:0 20px 30px rgba(0,0,0,0.12);
+
+      /* Severity reds */
+      --sev-critical:#7F1D1D;
+      --sev-severe:#B91C1C;
+      --sev-moderate:#EF4444;
+      --sev-minor:#FCA5A5;
     }
+
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
     html,body{height:100%}
     body{font-family:var(--font-body);font-size:14px;color:var(--text);background:var(--bg);overflow:hidden;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
 
+    /* ── HEADER ── */
     header{background:var(--blue);height:64px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:1000;box-shadow:0 2px 8px rgba(11,61,145,0.3)}
     .brand{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
     .brand-icon{width:38px;height:38px;background:rgba(255,255,255,0.15);border-radius:var(--r-sm);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center}
@@ -46,6 +65,7 @@
     .page{display:none;flex:1;overflow:hidden}
     .page.active{display:flex}
 
+    /* ── DB STATUS ── */
     .db-banner{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:var(--r-full);font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px;z-index:9999;box-shadow:var(--sh-md);transition:all 0.3s}
     .db-banner.online{background:#DCFCE7;color:#14532D;border:1px solid #86EFAC}
     .db-banner.connecting{background:var(--warning-bg);color:#78350F;border:1px solid #FCD34D}
@@ -55,11 +75,12 @@
     .db-banner.connecting .db-dot{background:var(--warning)}
     .db-banner.error .db-dot{background:var(--error)}
 
+    /* ── SIDEBAR ── */
     .sidebar{width:360px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;overflow:hidden}
     .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border-soft);border-bottom:1px solid var(--border-soft)}
     .stat-cell{background:var(--surface);padding:16px 14px;text-align:center}
     .stat-num{font-family:var(--font-head);font-weight:700;font-size:26px;line-height:1;color:var(--text)}
-    .stat-num.blue{color:var(--blue-light)} .stat-num.red{color:var(--error)} .stat-num.green{color:var(--success)}
+    .stat-num.blue{color:var(--blue-light)}.stat-num.red{color:var(--error)}.stat-num.green{color:var(--success)}
     .stat-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-top:5px}
 
     .filter-bar{padding:14px 16px 12px;border-bottom:1px solid var(--border-soft)}
@@ -73,39 +94,70 @@
     .card-list{flex:1;overflow-y:auto;padding:12px}
     .card-list::-webkit-scrollbar{width:5px}
     .card-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
     .report-card{padding:14px;background:var(--surface);border:1.5px solid var(--border-soft);border-radius:var(--r-md);margin-bottom:10px;cursor:pointer;transition:all 0.15s}
     .report-card:hover{border-color:var(--blue-light);box-shadow:var(--sh-md);transform:translateY(-1px)}
     .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
     .card-cat{display:flex;align-items:center;gap:8px;font-family:var(--font-head);font-weight:600;font-size:13.5px;color:var(--text)}
     .cat-bubble{width:32px;height:32px;border-radius:var(--r-sm);background:var(--blue-subtle);display:flex;align-items:center;justify-content:center;font-size:16px}
     .badge{padding:3px 9px;border-radius:var(--r-full);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;flex-shrink:0}
-    .badge.sev-critical{background:var(--error-bg);color:#B91C1C}
-    .badge.sev-severe{background:#FFEDD5;color:#C2410C}
-    .badge.sev-moderate{background:var(--warning-bg);color:#92400E}
-    .badge.sev-minor{background:var(--success-bg);color:#065F46}
+    .badge.sev-critical{background:#FEE2E2;color:var(--sev-critical)}
+    .badge.sev-severe{background:#FEE2E2;color:var(--sev-severe)}
+    .badge.sev-moderate{background:#FEE2E2;color:#C2410C}
+    .badge.sev-minor{background:#FFEDD5;color:#92400E}
     .card-desc{font-size:12.5px;color:var(--text-muted);line-height:1.5;margin-bottom:10px}
     .card-footer{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px dashed var(--border-soft);font-size:11px;color:var(--text-light)}
     .card-location{color:var(--blue-light);font-weight:600}
+
     .empty-state{padding:60px 30px;text-align:center}
     .empty-icon{font-size:40px;opacity:0.4;margin-bottom:12px}
     .empty-title{font-family:var(--font-head);font-weight:700;font-size:15px;margin-bottom:6px}
     .empty-text{font-size:12.5px;color:var(--text-muted);line-height:1.5}
 
+    /* ── MAP ── */
     .map-wrap{flex:1;position:relative}
     #map{width:100%;height:100%;background:#E9EEF4}
+
     .map-overlay{position:absolute;top:16px;left:16px;right:16px;z-index:500;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
     .map-overlay>*{pointer-events:auto}
     .map-info-box{background:var(--white);padding:10px 16px;border-radius:var(--r-md);box-shadow:var(--sh-md);border:1px solid var(--border-soft)}
     .map-info-label{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:700}
     .map-info-value{font-family:var(--font-head);font-weight:600;font-size:13px;color:var(--text);margin-top:1px}
+
+    /* Legend with severity reds */
     .map-legend{background:var(--white);padding:10px 14px;border-radius:var(--r-md);box-shadow:var(--sh-md);border:1px solid var(--border-soft);display:flex;gap:14px}
     .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-muted)}
-    .legend-pip{width:10px;height:10px;border-radius:50%}
-    .legend-pip.critical{background:var(--error)} .legend-pip.severe{background:#EA580C}
-    .legend-pip.moderate{background:var(--warning)} .legend-pip.minor{background:var(--success)}
+    .legend-pip{width:10px;height:10px;border-radius:50%;border:1.5px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.1)}
+    .legend-pip.critical{background:var(--sev-critical)}
+    .legend-pip.severe  {background:var(--sev-severe)}
+    .legend-pip.moderate{background:var(--sev-moderate)}
+    .legend-pip.minor   {background:var(--sev-minor)}
+
     .map-pick-banner{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:var(--blue);color:white;padding:13px 26px;border-radius:var(--r-full);font-family:var(--font-head);font-weight:700;font-size:14px;z-index:600;pointer-events:none;display:none;box-shadow:0 8px 24px rgba(11,61,145,0.4);animation:floatUp 1.8s ease-in-out infinite}
     @keyframes floatUp{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-6px)}}
 
+    /* Ward status pill */
+    .ward-status{position:absolute;bottom:28px;left:16px;background:white;padding:8px 14px;border-radius:var(--r-full);font-size:11px;font-weight:600;color:var(--blue);box-shadow:var(--sh-sm);border:1px solid var(--border-soft);z-index:499;display:none}
+
+    /* ── CLUSTER BUBBLES ── */
+    .cluster-bubble{
+      width:100%;height:100%;
+      border-radius:50%;
+      background:var(--sev-severe);
+      color:white;
+      font-family:var(--font-head);
+      font-weight:700;
+      font-size:13px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:3px solid white;
+      box-shadow:0 2px 8px rgba(185,28,28,0.45);
+    }
+    .cluster-bubble.big{background:var(--sev-critical);font-size:15px}
+    .cluster-bubble.small{background:var(--sev-moderate);font-size:11px}
+
+    /* ── STATS PAGE ── */
     #stats-page{flex-direction:column;overflow-y:auto;background:var(--bg)}
     .stats-container{max-width:1080px;width:100%;margin:0 auto;padding:40px 28px 60px}
     .page-heading{font-family:var(--font-head);font-size:36px;font-weight:700;color:var(--text);margin-bottom:6px}
@@ -114,31 +166,32 @@
     .kpi-card{background:var(--surface);border:1.5px solid var(--border-soft);border-radius:var(--r-lg);padding:22px 20px}
     .kpi-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:10px}
     .kpi-num{font-family:var(--font-head);font-size:44px;font-weight:700;color:var(--text);line-height:1}
-    .kpi-num.blue{color:var(--blue-light)} .kpi-num.red{color:var(--error)} .kpi-num.green{color:var(--success)}
+    .kpi-num.blue{color:var(--blue-light)}.kpi-num.red{color:var(--error)}.kpi-num.green{color:var(--success)}
     .kpi-sub{font-size:12px;color:var(--text-light);margin-top:6px}
     .section-head{font-family:var(--font-head);font-size:20px;font-weight:600;color:var(--text);margin-bottom:16px;margin-top:36px}
     .lb-table{background:var(--surface);border:1.5px solid var(--border-soft);border-radius:var(--r-lg);overflow:hidden}
     .lb-header{display:grid;grid-template-columns:44px 1fr 80px 120px;gap:12px;padding:10px 18px;background:var(--bg);border-bottom:1px solid var(--border-soft)}
     .lb-header-cell{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)}
     .lb-row{display:grid;grid-template-columns:44px 1fr 80px 120px;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border-soft);transition:background 0.1s}
-    .lb-row:last-child{border-bottom:none} .lb-row:hover{background:var(--bg)}
+    .lb-row:last-child{border-bottom:none}.lb-row:hover{background:var(--bg)}
     .lb-rank{font-family:var(--font-head);font-weight:700;font-size:18px;color:var(--text-muted);text-align:center}
     .lb-ward-name{font-family:var(--font-head);font-weight:600;font-size:13.5px;color:var(--text)}
     .lb-ward-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
     .lb-count{font-family:var(--font-head);font-weight:700;font-size:20px;color:var(--text);text-align:right}
     .lb-bar-track{height:6px;background:var(--border-soft);border-radius:4px;overflow:hidden}
-    .lb-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue-light));border-radius:4px;transition:width 0.5s ease}
+    .lb-bar-fill{height:100%;background:linear-gradient(90deg,var(--sev-critical),var(--sev-moderate));border-radius:4px;transition:width 0.5s ease}
     .party-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
     .party-card{background:var(--surface);border:1.5px solid var(--border-soft);border-radius:var(--r-md);padding:16px;display:flex;align-items:center;gap:12px}
     .party-badge{width:36px;height:36px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;flex-shrink:0}
-    .party-BJP{background:#EA580C} .party-INC{background:#1D4ED8} .party-SSUBT{background:#7C3AED}
-    .party-ShivSena{background:#CA8A04} .party-NCP{background:#059669} .party-SP{background:#DC2626} .party-other{background:#6B7280}
+    .party-BJP{background:#EA580C}.party-INC{background:#1D4ED8}.party-SSUBT{background:#7C3AED}
+    .party-ShivSena{background:#CA8A04}.party-NCP{background:#059669}.party-SP{background:#DC2626}.party-other{background:#6B7280}
     .party-tag{display:inline-block;padding:2px 8px;border-radius:var(--r-full);font-size:10px;font-weight:700}
-    .ptag-BJP{background:#FFEDD5;color:#9A3412} .ptag-INC{background:#DBEAFE;color:#1E3A8A}
-    .ptag-SSUBT{background:#EDE9FE;color:#5B21B6} .ptag-ShivSena{background:var(--warning-bg);color:#78350F}
-    .ptag-NCP{background:var(--success-bg);color:#14532D} .ptag-SP{background:var(--error-bg);color:#991B1B}
+    .ptag-BJP{background:#FFEDD5;color:#9A3412}.ptag-INC{background:#DBEAFE;color:#1E3A8A}
+    .ptag-SSUBT{background:#EDE9FE;color:#5B21B6}.ptag-ShivSena{background:var(--warning-bg);color:#78350F}
+    .ptag-NCP{background:var(--success-bg);color:#14532D}.ptag-SP{background:var(--error-bg);color:#991B1B}
     .ptag-other{background:var(--bg);color:var(--text-muted)}
 
+    /* ── MODALS ── */
     .overlay{position:fixed;inset:0;background:rgba(15,23,42,0.55);backdrop-filter:blur(8px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.2s}
     .overlay.open{opacity:1;pointer-events:all}
     .modal{background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:500px;max-height:calc(100vh - 40px);overflow:hidden;display:flex;flex-direction:column;transform:translateY(24px) scale(0.97);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);box-shadow:var(--sh-xl)}
@@ -153,17 +206,17 @@
     .modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
     .form-group{margin-bottom:18px}
     label{display:block;font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
-    label .req{color:var(--error)} label .opt{color:var(--text-light);font-weight:400;text-transform:none;letter-spacing:0}
+    label .req{color:var(--error)}label .opt{color:var(--text-light);font-weight:400;text-transform:none;letter-spacing:0}
     .seg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
     .seg-grid.sev{grid-template-columns:repeat(4,1fr)}
     .seg-btn{padding:10px 6px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--text-muted);font-family:var(--font-body);font-size:11.5px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.3;text-align:center}
     .seg-btn-emoji{font-size:18px}
     .seg-btn:hover{border-color:var(--blue);color:var(--blue)}
     .seg-btn.selected{border-color:var(--blue);background:var(--blue);color:white}
-    .sev-btn.selected[data-sev="critical"]{border-color:var(--error);background:var(--error);color:white}
-    .sev-btn.selected[data-sev="severe"]{border-color:#EA580C;background:#EA580C;color:white}
-    .sev-btn.selected[data-sev="moderate"]{border-color:var(--warning);background:var(--warning);color:white}
-    .sev-btn.selected[data-sev="minor"]{border-color:var(--success);background:var(--success);color:white}
+    .sev-btn.selected[data-sev="critical"]{border-color:var(--sev-critical);background:var(--sev-critical);color:white}
+    .sev-btn.selected[data-sev="severe"]{border-color:var(--sev-severe);background:var(--sev-severe);color:white}
+    .sev-btn.selected[data-sev="moderate"]{border-color:var(--sev-moderate);background:var(--sev-moderate);color:white}
+    .sev-btn.selected[data-sev="minor"]{border-color:var(--sev-minor);background:var(--sev-minor);color:#7C2D12}
     input[type="text"],textarea{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:11px 14px;color:var(--text);font-family:var(--font-body);font-size:14px;transition:all 0.15s;resize:vertical}
     input[type="text"]:focus,textarea:focus{outline:none;border-color:var(--blue-light);background:var(--white);box-shadow:0 0 0 3px rgba(47,111,237,0.12)}
     textarea{min-height:80px}
@@ -180,6 +233,7 @@
     .btn-primary:hover{background:#0A2F70}
     .btn-primary:disabled{opacity:0.6;cursor:not-allowed}
 
+    /* ── DETAIL MODAL ── */
     .detail-hero{padding:26px 26px 22px;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-light) 100%);color:white;position:relative;overflow:hidden}
     .detail-hero::before{content:'';position:absolute;top:-40%;right:-15%;width:220px;height:220px;background:rgba(255,255,255,0.08);border-radius:50%}
     .detail-hero::after{content:'';position:absolute;bottom:-30%;left:-10%;width:160px;height:160px;background:rgba(255,255,255,0.06);border-radius:50%}
@@ -212,6 +266,7 @@
     .action-btn.resolve-btn{background:var(--success);color:white;border-color:var(--success)}
     .action-btn.danger-btn{background:var(--error-bg);color:#B91C1C;border-color:#FECACA}
 
+    /* ── POPUP ── */
     .leaflet-popup-content-wrapper{border-radius:var(--r-md)!important;box-shadow:var(--sh-xl)!important;border:1px solid var(--border-soft)!important;padding:0!important}
     .leaflet-popup-content{margin:0!important;width:270px!important}
     .popup-box{font-family:var(--font-body);padding:14px}
@@ -225,16 +280,25 @@
     .popup-btn{width:100%;padding:8px;background:var(--blue);color:white;border:none;border-radius:var(--r-sm);font-family:var(--font-head);font-weight:600;font-size:12px;cursor:pointer;transition:background 0.15s}
     .popup-btn:hover{background:#0A2F70}
 
+    /* ── WARD TOOLTIP ── */
+    .leaflet-tooltip{font-family:var(--font-head);font-weight:700;font-size:12px;color:var(--blue);background:white;border:1.5px solid #BFDBFE;border-radius:6px;padding:5px 10px;box-shadow:var(--sh-md)}
+
+    /* ── TOAST ── */
     .toast{position:fixed;top:80px;left:50%;transform:translate(-50%,-20px);background:var(--text);color:white;padding:11px 20px;border-radius:var(--r-full);font-weight:600;font-size:13px;z-index:3000;opacity:0;pointer-events:none;box-shadow:var(--sh-lg);transition:all 0.25s;display:flex;align-items:center;gap:8px;white-space:nowrap}
     .toast.show{opacity:1;transform:translate(-50%,0)}
     .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    @media(max-width:768px){.sidebar{display:none}header{padding:0 16px}.brand-sub{display:none}.nav-btn{padding:6px 12px;font-size:12px}.helpline-pill{display:none}.btn-cta .cta-text{display:none}.stats-container{padding:24px 16px 40px}}
+    @media(max-width:768px){
+      .sidebar{display:none}header{padding:0 16px}.brand-sub{display:none}
+      .nav-btn{padding:6px 12px;font-size:12px}.helpline-pill{display:none}
+      .btn-cta .cta-text{display:none}.stats-container{padding:24px 16px 40px}
+    }
   </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <header>
   <div class="brand" onclick="showPage('map')">
     <div class="brand-icon">
@@ -256,12 +320,13 @@
 </header>
 
 <div class="main">
+
   <!-- MAP PAGE -->
   <div class="page active" id="map-page">
     <aside class="sidebar">
       <div class="stat-row">
         <div class="stat-cell"><div class="stat-num blue" id="s-total">—</div><div class="stat-lbl">Total</div></div>
-        <div class="stat-cell"><div class="stat-num red"   id="s-critical">—</div><div class="stat-lbl">Critical</div></div>
+        <div class="stat-cell"><div class="stat-num red"  id="s-critical">—</div><div class="stat-lbl">Critical</div></div>
         <div class="stat-cell"><div class="stat-num green" id="s-resolved">—</div><div class="stat-lbl">Resolved</div></div>
       </div>
       <div class="filter-bar">
@@ -271,20 +336,24 @@
         </div>
         <div class="filter-chips">
           <button class="chip active" data-f="all"      onclick="setFilter('all',this)">All</button>
-          <button class="chip"        data-f="critical"  onclick="setFilter('critical',this)"><span class="chip-dot" style="background:var(--error)"></span>Critical</button>
-          <button class="chip"        data-f="severe"    onclick="setFilter('severe',this)"><span class="chip-dot" style="background:#EA580C"></span>Severe</button>
-          <button class="chip"        data-f="moderate"  onclick="setFilter('moderate',this)"><span class="chip-dot" style="background:var(--warning)"></span>Moderate</button>
-          <button class="chip"        data-f="minor"     onclick="setFilter('minor',this)"><span class="chip-dot" style="background:var(--success)"></span>Minor</button>
+          <button class="chip"        data-f="critical"  onclick="setFilter('critical',this)"><span class="chip-dot" style="background:var(--sev-critical)"></span>Critical</button>
+          <button class="chip"        data-f="severe"    onclick="setFilter('severe',this)"><span class="chip-dot" style="background:var(--sev-severe)"></span>Severe</button>
+          <button class="chip"        data-f="moderate"  onclick="setFilter('moderate',this)"><span class="chip-dot" style="background:var(--sev-moderate)"></span>Moderate</button>
+          <button class="chip"        data-f="minor"     onclick="setFilter('minor',this)"><span class="chip-dot" style="background:var(--sev-minor)"></span>Minor</button>
         </div>
       </div>
       <div class="card-list" id="card-list">
-        <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Connecting…</div><div class="empty-text">Loading live reports from database.</div></div>
+        <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Connecting…</div><div class="empty-text">Loading live reports.</div></div>
       </div>
     </aside>
+
     <div class="map-wrap">
       <div id="map"></div>
       <div class="map-overlay">
-        <div class="map-info-box"><div class="map-info-label">Showing</div><div class="map-info-value">All Mumbai · 24 BMC Wards</div></div>
+        <div class="map-info-box">
+          <div class="map-info-label">Showing</div>
+          <div class="map-info-value" id="map-info-val">All Mumbai · 24 BMC Wards</div>
+        </div>
         <div class="map-legend">
           <div class="legend-item"><span class="legend-pip critical"></span>Critical</div>
           <div class="legend-item"><span class="legend-pip severe"></span>Severe</div>
@@ -293,6 +362,7 @@
         </div>
       </div>
       <div class="map-pick-banner" id="pick-banner">📍 Tap anywhere on the map to drop a pin</div>
+      <div class="ward-status" id="ward-status">🗺 Ward boundaries loaded</div>
     </div>
   </div>
 
@@ -389,16 +459,17 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 
+/* ── Ward database ── */
 const WARDS=[
   {code:'A',  name:'Ward A',        localities:'Colaba, Fort, Cuffe Parade',   zone:'South',lat:18.9272,lng:72.8258,mla:'Rahul Narwekar',      mlaConst:'Colaba',      mlaParty:'BJP',      corp:'Makarand Narwekar',     corpParty:'BJP'},
   {code:'B',  name:'Ward B',        localities:'Sandhurst Road, Dongri',       zone:'South',lat:18.9555,lng:72.8362,mla:'Amin Patel',           mlaConst:'Mumbadevi',   mlaParty:'INC',      corp:'Amin Patel (Local Rep)',corpParty:'INC'},
   {code:'C',  name:'Ward C',        localities:'Kalbadevi, Marine Lines',      zone:'South',lat:18.9482,lng:72.8252,mla:'Amin Patel',           mlaConst:'Mumbadevi',   mlaParty:'INC',      corp:'Veena Jain',            corpParty:'BJP'},
   {code:'D',  name:'Ward D',        localities:'Malabar Hill, Grant Road',     zone:'South',lat:18.9634,lng:72.8122,mla:'Mangal Prabhat Lodha', mlaConst:'Malabar Hill',mlaParty:'BJP',      corp:'Mangal P. Lodha (Rep)', corpParty:'BJP'},
-  {code:'E',  name:'Ward E',        localities:'Byculla, Mazgaon',             zone:'South',lat:18.9730,lng:72.8340,mla:'Manoj Jamsutkar',      mlaConst:'Byculla',     mlaParty:'SS (UBT)', corp:'Manoj Jamsutkar (Rep)', corpParty:'SS (UBT)'},
+  {code:'E',  name:'Ward E',        localities:'Byculla, Mazgaon',             zone:'South',lat:18.9730,lng:72.8340,mla:'Manoj Jamsutkar',      mlaConst:'Byculla',     mlaParty:'SS (UBT)',corp:'Manoj Jamsutkar (Rep)', corpParty:'SS (UBT)'},
   {code:'F/N',name:'Ward F North',  localities:'Sion, Matunga, Wadala',        zone:'South',lat:19.0300,lng:72.8600,mla:'Kalidas Kolambkar',    mlaConst:'Wadala',      mlaParty:'BJP',      corp:'Kalidas Kolambkar (Rep)',corpParty:'BJP'},
-  {code:'F/S',name:'Ward F South',  localities:'Parel, Sewri',                 zone:'South',lat:19.0000,lng:72.8500,mla:'Ajay Choudhari',       mlaConst:'Shivadi',     mlaParty:'SS (UBT)', corp:'Sunil More',            corpParty:'INC'},
-  {code:'G/N',name:'Ward G North',  localities:'Dadar, Mahim, Dharavi',        zone:'South',lat:19.0350,lng:72.8400,mla:'Mahesh Sawant',        mlaConst:'Mahim',       mlaParty:'SS (UBT)', corp:'Mahesh Sawant (Rep)',   corpParty:'SS (UBT)'},
-  {code:'G/S',name:'Ward G South',  localities:'Worli, Lower Parel',           zone:'South',lat:18.9950,lng:72.8250,mla:'Aditya Thackeray',     mlaConst:'Worli',       mlaParty:'SS (UBT)', corp:'Aditya Thackeray (Rep)',corpParty:'SS (UBT)'},
+  {code:'F/S',name:'Ward F South',  localities:'Parel, Sewri',                 zone:'South',lat:19.0000,lng:72.8500,mla:'Ajay Choudhari',       mlaConst:'Shivadi',     mlaParty:'SS (UBT)',corp:'Sunil More',            corpParty:'INC'},
+  {code:'G/N',name:'Ward G North',  localities:'Dadar, Mahim, Dharavi',        zone:'South',lat:19.0350,lng:72.8400,mla:'Mahesh Sawant',        mlaConst:'Mahim',       mlaParty:'SS (UBT)',corp:'Mahesh Sawant (Rep)',   corpParty:'SS (UBT)'},
+  {code:'G/S',name:'Ward G South',  localities:'Worli, Lower Parel',           zone:'South',lat:18.9950,lng:72.8250,mla:'Aditya Thackeray',     mlaConst:'Worli',       mlaParty:'SS (UBT)',corp:'Aditya Thackeray (Rep)',corpParty:'SS (UBT)'},
   {code:'H/E',name:'Ward H East',   localities:'Bandra (E), Santacruz (E)',    zone:'West', lat:19.0600,lng:72.8500,mla:'Varsha Gaikwad',       mlaConst:'Dharavi',     mlaParty:'INC',      corp:'Pooja Mahadeshwar',     corpParty:'SS (UBT)'},
   {code:'H/W',name:'Ward H West',   localities:'Bandra (W), Khar (W)',         zone:'West', lat:19.0550,lng:72.8300,mla:'Ashish Shelar',        mlaConst:'Bandra West', mlaParty:'BJP',      corp:'Ashish Shelar (Rep)',   corpParty:'BJP'},
   {code:'K/E',name:'Ward K East',   localities:'Andheri (E), Vile Parle (E)', zone:'West', lat:19.1150,lng:72.8600,mla:'Murji Patel',          mlaConst:'Andheri East',mlaParty:'Shiv Sena',corp:'Pramod Sawant',         corpParty:'SS (UBT)'},
@@ -415,56 +486,220 @@ const WARDS=[
   {code:'S',  name:'Ward S',        localities:'Bhandup, Powai',               zone:'East', lat:19.1400,lng:72.9300,mla:'Ashok Patil',          mlaConst:'Bhandup West',mlaParty:'Shiv Sena',corp:'Ashok Patil',           corpParty:'Shiv Sena'},
   {code:'T',  name:'Ward T',        localities:'Mulund',                       zone:'East', lat:19.1700,lng:72.9500,mla:'Mihir Kotecha',        mlaConst:'Mulund',      mlaParty:'BJP',      corp:'Mihir Kotecha (Rep)',   corpParty:'BJP'},
 ];
+
 const MAYOR={name:'Ritu Tawde',party:'BJP',alliance:'Mahayuti (BJP + Shiv Sena)'};
 const CAT_EMOJI={'Open Dump':'🪣','Drain/Nala':'🌊','Construction':'🏗️','Plastic Waste':'🧴','Food Waste':'🍚','Other':'📦'};
+const SEV_COLORS={critical:'#7F1D1D',severe:'#B91C1C',moderate:'#EF4444',minor:'#FCA5A5'};
+const SEV_STROKE={critical:'#450a0a',severe:'#7F1D1D',moderate:'#B91C1C',minor:'#EF4444'};
 
-let reports=[],mapMarkers={},activeFilter='all',pickMode=false,pendingLL=null,selectedCat='Open Dump',selectedSev='moderate',currentPage='map';
+let reports=[],clusterGroup=null,activeFilter='all',pickMode=false,pendingLL=null,selectedCat='Open Dump',selectedSev='moderate',currentPage='map';
 
 function findWard(lat,lng){let b=WARDS[0],m=Infinity;for(const w of WARDS){const d=Math.hypot(w.lat-lat,w.lng-lng);if(d<m){m=d;b=w;}}return b;}
 
-/* MAP */
-const map=L.map('map',{center:[19.076,72.8777],zoom:12,zoomControl:false});
+/* ════ MAP INIT ════ */
+const map = L.map('map',{center:[19.076,72.8777],zoom:12,zoomControl:false});
 L.control.zoom({position:'bottomright'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OSM &copy; CARTO',subdomains:'abcd',maxZoom:20}).addTo(map);
+
+/* CartoDB Voyager — richer, more detailed tiles like FixAhm */
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  subdomains:'abcd',maxZoom:20
+}).addTo(map);
+
 map.on('click',e=>{if(!pickMode)return;pendingLL=e.latlng;exitPickMode();openReportModal(e.latlng);});
 
-function makeIcon(sev){
-  const c={critical:'#DC2626',severe:'#EA580C',moderate:'#F59E0B',minor:'#16A34A'}[sev]||'#6B7280';
-  return L.divIcon({html:`<svg width="30" height="38" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"><defs><filter id="ds" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter></defs><path d="M15 0C6.716 0 0 6.716 0 15c0 10.5 15 23 15 23s15-12.5 15-23C30 6.716 23.284 0 15 0z" fill="${c}" filter="url(#ds)"/><circle cx="15" cy="15" r="5.5" fill="white"/></svg>`,iconSize:[30,38],iconAnchor:[15,38],popupAnchor:[0,-40],className:''});
+/* ════ WARD BOUNDARIES ════ */
+/* Try multiple public GeoJSON sources for Mumbai ward polygons */
+async function loadWardBoundaries(){
+  const sources = [
+    'https://raw.githubusercontent.com/datameet/Municipal_Spatial_Data/master/Mumbai/Mumbai.geojson',
+    'https://raw.githubusercontent.com/mickeykedia/Mumbai-Population-Map/master/Mumbai.geojson',
+    'https://raw.githubusercontent.com/datameet/Municipal_Spatial_Data/master/Mumbai/wards.geojson',
+  ];
+
+  for(const url of sources){
+    try{
+      const resp = await fetch(url);
+      if(!resp.ok) continue;
+      const data = await resp.json();
+      if(!data || !data.features || !data.features.length) continue;
+      drawWardLayer(data);
+      const pill = document.getElementById('ward-status');
+      pill.textContent = '🗺 Ward boundaries loaded';
+      pill.style.display = 'block';
+      setTimeout(()=>pill.style.display='none', 3000);
+      return;
+    } catch(e){ continue; }
+  }
+  /* Silently fail — map still works without boundaries */
+}
+
+function drawWardLayer(geojson){
+  const wardLayer = L.geoJSON(geojson,{
+    style:{
+      color:'#1E40AF',
+      weight:1.8,
+      fillOpacity:0.04,
+      fillColor:'#2F6FED',
+      dashArray:'',
+    },
+    onEachFeature(feature,layer){
+      /* Try all common property names for ward name */
+      const props = feature.properties || {};
+      const wardName =
+        props.WardName || props.wardname || props.WARDNAME ||
+        props.Name     || props.name     || props.NAME     ||
+        props.Ward     || props.ward     || props.WARD     ||
+        props.WardNo   || props.wardno   ||
+        props.AC_NAME  || props.ward_name||
+        'Ward';
+
+      layer.on('mouseover', function(e){
+        this.setStyle({fillOpacity:0.18, weight:2.5, color:'#0B3D91'});
+        this.bindTooltip(`<b>${wardName}</b>`,{sticky:true,direction:'top'}).openTooltip(e.latlng);
+        document.getElementById('map-info-val').textContent = wardName;
+      });
+      layer.on('mouseout', function(){
+        wardLayer.resetStyle(this);
+        this.closeTooltip();
+        document.getElementById('map-info-val').textContent = 'All Mumbai · 24 BMC Wards';
+      });
+      layer.on('click', function(e){
+        L.DomEvent.stopPropagation(e);
+      });
+    }
+  });
+  /* Add BELOW the cluster layer so circles show on top */
+  wardLayer.addTo(map);
+  wardLayer.bringToBack();
+}
+
+/* ════ CLUSTER MARKERS ════ */
+function buildClusterGroup(){
+  return L.markerClusterGroup({
+    maxClusterRadius: 55,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    /* Custom cluster bubble — red circles with count */
+    iconCreateFunction(cluster){
+      const count  = cluster.getChildCount();
+      const size   = count >= 20 ? 44 : count >= 10 ? 38 : 32;
+      const cls    = count >= 20 ? 'big' : count <= 5 ? 'small' : '';
+      return L.divIcon({
+        html:`<div class="cluster-bubble ${cls}">${count}</div>`,
+        className:'',
+        iconSize:L.point(size,size),
+        iconAnchor:L.point(size/2,size/2)
+      });
+    }
+  });
+}
+
+function sevColor(s){ return SEV_COLORS[s]||'#EF4444'; }
+function sevStroke(s){ return SEV_STROKE[s]||'#B91C1C'; }
+
+function renderMarkers(){
+  if(clusterGroup){ map.removeLayer(clusterGroup); }
+  clusterGroup = buildClusterGroup();
+
+  const list = activeFilter==='all' ? reports : reports.filter(r=>r.severity===activeFilter);
+
+  list.forEach(r=>{
+    const circle = L.circleMarker([r.lat,r.lng],{
+      radius: 9,
+      fillColor: sevColor(r.severity),
+      color: 'white',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.92,
+    });
+    circle.bindPopup(buildPopup(r),{maxWidth:270,minWidth:270});
+    /* Also open detail on click */
+    circle.on('click',()=>{ /* popup handles it */ });
+    clusterGroup.addLayer(circle);
+  });
+
+  map.addLayer(clusterGroup);
 }
 
 function buildPopup(r){
   const w=findWard(r.lat,r.lng);
-  return `<div class="popup-box"><div class="popup-top"><div class="popup-cat">${CAT_EMOJI[r.category]||'📦'} ${r.category}</div><span class="badge sev-${r.severity}">${r.severity}</span></div>${r.landmark?`<div style="font-size:11px;color:var(--blue-light);font-weight:600;margin-bottom:6px">📍 ${r.landmark}</div>`:''} ${r.description?`<div class="popup-desc">${r.description}</div>`:''}<div class="popup-tag-box"><div class="popup-tag-lbl">⚡ Auto-tagged</div><div class="popup-tag-name">${w.corp} <span class="party-tag ${pClass(w.corpParty)}">${w.corpParty}</span></div><div class="popup-tag-sub">${w.mla} · ${w.name}</div></div><button class="popup-btn" onclick="openDetail('${r.id}')">View full details →</button></div>`;
+  return `<div class="popup-box">
+    <div class="popup-top">
+      <div class="popup-cat">${CAT_EMOJI[r.category]||'📦'} ${r.category}</div>
+      <span class="badge sev-${r.severity}">${r.severity}</span>
+    </div>
+    ${r.landmark?`<div style="font-size:11px;color:var(--blue-light);font-weight:600;margin-bottom:6px">📍 ${r.landmark}</div>`:''}
+    ${r.description?`<div class="popup-desc">${r.description}</div>`:''}
+    <div class="popup-tag-box">
+      <div class="popup-tag-lbl">⚡ Auto-tagged</div>
+      <div class="popup-tag-name">${w.corp} <span class="party-tag ${pClass(w.corpParty)}">${w.corpParty}</span></div>
+      <div class="popup-tag-sub">${w.mla} · ${w.name}</div>
+    </div>
+    <button class="popup-btn" onclick="openDetail('${r.id}')">View full details →</button>
+  </div>`;
 }
 
-function renderMarkers(){Object.values(mapMarkers).forEach(m=>map.removeLayer(m));mapMarkers={};const list=activeFilter==='all'?reports:reports.filter(r=>r.severity===activeFilter);list.forEach(r=>{const m=L.marker([r.lat,r.lng],{icon:makeIcon(r.severity)});m.bindPopup(buildPopup(r),{maxWidth:270,minWidth:270});m.addTo(map);mapMarkers[r.id]=m;});}
-
+/* ════ SIDEBAR ════ */
 function renderSidebar(){
   const filtered=(activeFilter==='all'?[...reports]:reports.filter(r=>r.severity===activeFilter)).sort((a,b)=>b.time-a.time);
   document.getElementById('filter-count').textContent=`${filtered.length} report${filtered.length===1?'':'s'}`;
   const el=document.getElementById('card-list');
-  if(!filtered.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">No reports yet</div><div class="empty-text">Be the first to pin a garbage spot. Your neta will be auto-tagged instantly.</div></div>`;return;}
-  el.innerHTML=filtered.map(r=>{const w=findWard(r.lat,r.lng);return`<div class="report-card" onclick="openDetail('${r.id}')"><div class="card-top"><div class="card-cat"><div class="cat-bubble">${CAT_EMOJI[r.category]||'📦'}</div><div><div>${r.category}</div><div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-top:1px">${w.name}</div></div></div><span class="badge sev-${r.severity}">${r.severity}</span></div>${r.description?`<div class="card-desc">${trunc(r.description,85)}</div>`:''}<div class="card-footer"><span class="card-location">📍 ${r.landmark||w.localities}</span><span>${timeAgo(r.time)}</span></div></div>`;}).join('');
+  if(!filtered.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">No reports yet</div><div class="empty-text">Be the first to pin a garbage spot in Mumbai. Your neta will be auto-tagged.</div></div>`;
+    return;
+  }
+  el.innerHTML=filtered.map(r=>{
+    const w=findWard(r.lat,r.lng);
+    const dotColor=sevColor(r.severity);
+    return `<div class="report-card" onclick="openDetail('${r.id}')">
+      <div class="card-top">
+        <div class="card-cat">
+          <div class="cat-bubble">${CAT_EMOJI[r.category]||'📦'}</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px">${r.category} <span style="width:8px;height:8px;border-radius:50%;background:${dotColor};display:inline-block;flex-shrink:0"></span></div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-top:1px">${w.name}</div>
+          </div>
+        </div>
+        <span class="badge sev-${r.severity}">${r.severity}</span>
+      </div>
+      ${r.description?`<div class="card-desc">${trunc(r.description,85)}</div>`:''}
+      <div class="card-footer">
+        <span class="card-location">📍 ${r.landmark||w.localities}</span>
+        <span>${timeAgo(r.time)}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
+/* ════ STATS ════ */
 function renderStats(){
   const total=reports.length,critical=reports.filter(r=>r.severity==='critical').length,resolved=reports.filter(r=>r.status==='resolved').length;
   const today=new Date();today.setHours(0,0,0,0);
   const todayN=reports.filter(r=>new Date(r.time)>=today).length;
-  document.getElementById('kpi-grid').innerHTML=`<div class="kpi-card"><div class="kpi-label">Total Reports</div><div class="kpi-num blue">${total}</div><div class="kpi-sub">across 24 BMC wards</div></div><div class="kpi-card"><div class="kpi-label">Critical</div><div class="kpi-num red">${critical}</div><div class="kpi-sub">need urgent action</div></div><div class="kpi-card"><div class="kpi-label">Resolved</div><div class="kpi-num green">${resolved}</div><div class="kpi-sub">${total?Math.round(resolved/total*100):0}% resolution rate</div></div><div class="kpi-card"><div class="kpi-label">Today</div><div class="kpi-num">${todayN}</div><div class="kpi-sub">new in last 24 h</div></div>`;
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">Total Reports</div><div class="kpi-num blue">${total}</div><div class="kpi-sub">across 24 BMC wards</div></div>
+    <div class="kpi-card"><div class="kpi-label">Critical</div><div class="kpi-num red">${critical}</div><div class="kpi-sub">need urgent action</div></div>
+    <div class="kpi-card"><div class="kpi-label">Resolved</div><div class="kpi-num green">${resolved}</div><div class="kpi-sub">${total?Math.round(resolved/total*100):0}% resolution rate</div></div>
+    <div class="kpi-card"><div class="kpi-label">Today</div><div class="kpi-num">${todayN}</div><div class="kpi-sub">new in last 24 h</div></div>`;
+
   const counts={};reports.forEach(r=>{const w=findWard(r.lat,r.lng);if(!counts[w.code])counts[w.code]={ward:w,count:0};counts[w.code].count++;});
   const ranked=Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,12);const maxC=ranked[0]?.count||1;
-  document.getElementById('lb-table').innerHTML=`<div class="lb-header"><div class="lb-header-cell">#</div><div class="lb-header-cell">Ward</div><div class="lb-header-cell" style="text-align:right">Reports</div><div class="lb-header-cell">Share</div></div>${ranked.map((item,i)=>`<div class="lb-row"><div class="lb-rank">${i+1}</div><div><div class="lb-ward-name">${item.ward.name} <span class="party-tag ${pClass(item.ward.corpParty)}">${item.ward.corpParty}</span></div><div class="lb-ward-sub">${item.ward.localities}</div></div><div class="lb-count">${item.count}</div><div class="lb-bar-track"><div class="lb-bar-fill" style="width:${(item.count/maxC)*100}%"></div></div></div>`).join('')}${!ranked.length?'<div class="lb-row"><div></div><div style="color:var(--text-muted);font-size:13px">No reports yet!</div><div></div><div></div></div>':''}`;
+  document.getElementById('lb-table').innerHTML=`
+    <div class="lb-header"><div class="lb-header-cell">#</div><div class="lb-header-cell">Ward</div><div class="lb-header-cell" style="text-align:right">Reports</div><div class="lb-header-cell">Share</div></div>
+    ${ranked.map((item,i)=>`<div class="lb-row"><div class="lb-rank">${i+1}</div><div><div class="lb-ward-name">${item.ward.name} <span class="party-tag ${pClass(item.ward.corpParty)}">${item.ward.corpParty}</span></div><div class="lb-ward-sub">${item.ward.localities}</div></div><div class="lb-count">${item.count}</div><div class="lb-bar-track"><div class="lb-bar-fill" style="width:${(item.count/maxC)*100}%"></div></div></div>`).join('')}
+    ${!ranked.length?'<div class="lb-row"><div></div><div style="color:var(--text-muted);font-size:13px">No reports yet!</div><div></div><div></div></div>':''}`;
+
   const pc={};reports.forEach(r=>{const w=findWard(r.lat,r.lng);const p=w.corpParty||'Other';pc[p]=(pc[p]||0)+1;});
-  const parties=Object.entries(pc).sort((a,b)=>b[1]-a[1]);
-  document.getElementById('party-grid').innerHTML=parties.map(([p,c])=>`<div class="party-card"><div class="party-badge ${pBadgeClass(p)}">${partyInitials(p)}</div><div><div style="font-family:var(--font-head);font-weight:700;font-size:14px">${p}</div><div style="font-size:12px;color:var(--text-muted)">${c} report${c===1?'':'s'}</div></div></div>`).join('')||'<div style="color:var(--text-muted);font-size:13px">No data yet.</div>';
+  document.getElementById('party-grid').innerHTML=Object.entries(pc).sort((a,b)=>b[1]-a[1]).map(([p,c])=>`
+    <div class="party-card"><div class="party-badge ${pBadgeClass(p)}">${partyInitials(p)}</div><div><div style="font-family:var(--font-head);font-weight:700;font-size:14px">${p}</div><div style="font-size:12px;color:var(--text-muted)">${c} report${c===1?'':'s'}</div></div></div>`).join('')||'<div style="color:var(--text-muted);font-size:13px">No data yet.</div>';
 }
 
 function updateHeaderStats(){document.getElementById('s-total').textContent=reports.length;document.getElementById('s-critical').textContent=reports.filter(r=>r.severity==='critical').length;document.getElementById('s-resolved').textContent=reports.filter(r=>r.status==='resolved').length;}
 function renderAll(){renderMarkers();renderSidebar();updateHeaderStats();if(currentPage==='stats')renderStats();}
 
-/* FIRESTORE LISTENER */
+/* ════ FIRESTORE ════ */
 function startListener(){
   const q=query(collection(db,'reports'),orderBy('time','desc'));
   onSnapshot(q,snap=>{
@@ -474,7 +709,7 @@ function startListener(){
   },err=>{console.error(err);setDbStatus('error','⚠️ DB error');});
 }
 
-/* PICK MODE */
+/* ════ PICK MODE ════ */
 function togglePickMode(){if(pickMode){exitPickMode();return;}pickMode=true;showPage('map');document.getElementById('report-btn').classList.add('cancel-mode');document.getElementById('report-btn').innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg><span class="cta-text">Cancel</span>';document.getElementById('pick-banner').style.display='block';map.getContainer().style.cursor='crosshair';}
 function exitPickMode(){pickMode=false;document.getElementById('report-btn').classList.remove('cancel-mode');document.getElementById('report-btn').innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg><span class="cta-text">Report Garbage</span>';document.getElementById('pick-banner').style.display='none';map.getContainer().style.cursor='';}
 
@@ -492,23 +727,56 @@ async function submitReport(){
   const btn=document.getElementById('submit-btn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving…';
   try{
     const w=findWard(pendingLL.lat,pendingLL.lng);
-    await addDoc(collection(db,'reports'),{lat:pendingLL.lat,lng:pendingLL.lng,category:selectedCat,severity:selectedSev,landmark:document.getElementById('landmark-input').value.trim(),description:document.getElementById('desc-input').value.trim(),status:'reported',time:serverTimestamp(),wardCode:w.code,wardName:w.name,mla:w.mla,mlaParty:w.mlaParty,corp:w.corp,corpParty:w.corpParty});
-    closeModal('report-overlay');toast('Report saved — visible to everyone now! 🎉','📍');pendingLL=null;
+    await addDoc(collection(db,'reports'),{
+      lat:pendingLL.lat,lng:pendingLL.lng,category:selectedCat,severity:selectedSev,
+      landmark:document.getElementById('landmark-input').value.trim(),
+      description:document.getElementById('desc-input').value.trim(),
+      status:'reported',time:serverTimestamp(),wardCode:w.code,wardName:w.name,
+      mla:w.mla,mlaParty:w.mlaParty,corp:w.corp,corpParty:w.corpParty,
+    });
+    closeModal('report-overlay');toast('Report saved — visible to everyone! 🎉','📍');pendingLL=null;
   }catch(e){console.error(e);toast('Error saving — check connection','⚠️');}
   finally{btn.disabled=false;btn.innerHTML='Submit Report →';}
 }
 
+/* ════ DETAIL MODAL ════ */
 window.openDetail=function(id){
   const r=reports.find(x=>x.id===id);if(!r)return;
   const w=findWard(r.lat,r.lng);
   const statuses=['reported','acknowledged','resolved'];const stepIdx=statuses.indexOf(r.status||'reported');
   const tweetTxt=encodeURIComponent(`🚨 Garbage at ${w.name} (${w.localities}), Mumbai — near "${r.landmark||w.localities}".\nCorporator: ${w.corp} · MLA: ${w.mla} (${w.mlaParty})\nSeverity: ${r.severity.toUpperCase()}\n#FixMumbai @MumbaiBMC`);
-  document.getElementById('detail-modal-inner').innerHTML=`<div class="detail-hero"><button class="modal-close" onclick="closeModal('detail-overlay')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button><div class="detail-hero-content"><h2>${CAT_EMOJI[r.category]||'📦'} ${r.category}</h2><p>${w.name} · ${r.landmark||w.localities}</p></div></div><div class="stepper"><div class="stepper-line"></div>${['Reported','Acknowledged','Resolved'].map((lbl,i)=>`<div class="step ${stepIdx>=i?'done':''}"><div class="step-dot">${stepIdx>=i?'✓':i+1}</div><div class="step-label">${lbl}</div></div>`).join('')}</div><div class="authority-block"><div class="authority-block-title">Your elected netas</div><div class="authority-block-sub">${w.name} · ${w.zone} Mumbai</div><div class="person-row"><div class="person-avatar">${initials(w.corp)}</div><div><div class="person-role">Corporator · BMC 2026</div><div class="person-name">${w.corp}</div><div class="person-meta"><span class="party-tag ${pClass(w.corpParty)}">${w.corpParty}</span></div></div></div><div class="person-row"><div class="person-avatar">${initials(w.mla)}</div><div><div class="person-role">MLA · ${w.mlaConst} (2024)</div><div class="person-name">${w.mla}</div><div class="person-meta"><span class="party-tag ${pClass(w.mlaParty)}">${w.mlaParty}</span></div></div></div><div class="person-row"><div class="person-avatar" style="background:linear-gradient(135deg,#0B3D91,#2F6FED)">${initials(MAYOR.name)}</div><div><div class="person-role">Mayor of Mumbai</div><div class="person-name">${MAYOR.name}</div><div class="person-meta"><span class="party-tag ${pClass(MAYOR.party)}">${MAYOR.party}</span> · ${MAYOR.alliance}</div></div></div></div><div class="action-grid"><button class="action-btn tweet" onclick="window.open('https://twitter.com/intent/tweet?text=${tweetTxt}','_blank')"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>Tag on X</button><button class="action-btn call-btn" onclick="window.location.href='tel:1916'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.128.96.338 1.903.63 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.292 1.85.502 2.81.63A2 2 0 0122 16.92z"/></svg>Call 1916</button>${r.status!=='resolved'?`<button class="action-btn" onclick="updateStatus('${r.id}','${statuses[Math.min(stepIdx+1,2)]}')">✓ Mark as ${statuses[Math.min(stepIdx+1,2)]}</button><button class="action-btn danger-btn" onclick="deleteReport('${r.id}')">🗑 Delete</button>`:`<button class="action-btn resolve-btn full-col" onclick="closeModal('detail-overlay')">✓ Resolved — Close</button>`}</div>`;
+
+  const sevDot=`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${sevColor(r.severity)};margin-right:6px;vertical-align:middle"></span>`;
+
+  document.getElementById('detail-modal-inner').innerHTML=`
+    <div class="detail-hero">
+      <button class="modal-close" onclick="closeModal('detail-overlay')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <div class="detail-hero-content">
+        <h2>${CAT_EMOJI[r.category]||'📦'} ${r.category}</h2>
+        <p>${sevDot}${r.severity} · ${w.name} · ${r.landmark||w.localities}</p>
+      </div>
+    </div>
+    <div class="stepper">
+      <div class="stepper-line"></div>
+      ${['Reported','Acknowledged','Resolved'].map((lbl,i)=>`<div class="step ${stepIdx>=i?'done':''}"><div class="step-dot">${stepIdx>=i?'✓':i+1}</div><div class="step-label">${lbl}</div></div>`).join('')}
+    </div>
+    <div class="authority-block">
+      <div class="authority-block-title">Your elected netas</div>
+      <div class="authority-block-sub">${w.name} · ${w.zone} Mumbai</div>
+      <div class="person-row"><div class="person-avatar">${initials(w.corp)}</div><div><div class="person-role">Corporator · BMC 2026</div><div class="person-name">${w.corp}</div><div class="person-meta"><span class="party-tag ${pClass(w.corpParty)}">${w.corpParty}</span></div></div></div>
+      <div class="person-row"><div class="person-avatar">${initials(w.mla)}</div><div><div class="person-role">MLA · ${w.mlaConst} (2024)</div><div class="person-name">${w.mla}</div><div class="person-meta"><span class="party-tag ${pClass(w.mlaParty)}">${w.mlaParty}</span></div></div></div>
+      <div class="person-row"><div class="person-avatar" style="background:linear-gradient(135deg,#0B3D91,#2F6FED)">${initials(MAYOR.name)}</div><div><div class="person-role">Mayor of Mumbai</div><div class="person-name">${MAYOR.name}</div><div class="person-meta"><span class="party-tag ${pClass(MAYOR.party)}">${MAYOR.party}</span> · ${MAYOR.alliance}</div></div></div>
+    </div>
+    <div class="action-grid">
+      <button class="action-btn tweet" onclick="window.open('https://twitter.com/intent/tweet?text=${tweetTxt}','_blank')"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>Tag on X</button>
+      <button class="action-btn call-btn" onclick="window.location.href='tel:1916'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.128.96.338 1.903.63 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.292 1.85.502 2.81.63A2 2 0 0122 16.92z"/></svg>Call 1916</button>
+      ${r.status!=='resolved'?`<button class="action-btn" onclick="updateStatus('${r.id}','${statuses[Math.min(stepIdx+1,2)]}')">✓ Mark as ${statuses[Math.min(stepIdx+1,2)]}</button><button class="action-btn danger-btn" onclick="deleteReport('${r.id}')">🗑 Delete</button>`:`<button class="action-btn resolve-btn full-col" onclick="closeModal('detail-overlay')">✓ Resolved — Close</button>`}
+    </div>`;
   document.getElementById('detail-overlay').classList.add('open');
 };
 
-window.updateStatus=async function(id,ns){try{await updateDoc(doc(db,'reports',id),{status:ns});closeModal('detail-overlay');toast(`Marked as ${ns}`,'✓');setTimeout(()=>openDetail(id),300);}catch(e){toast('Error updating','⚠️');}};
-window.deleteReport=async function(id){if(!confirm('Delete this report?'))return;try{await deleteDoc(doc(db,'reports',id));closeModal('detail-overlay');toast('Report deleted','🗑');}catch(e){toast('Error deleting','⚠️');}};
+window.updateStatus=async function(id,ns){try{await updateDoc(doc(db,'reports',id),{status:ns});closeModal('detail-overlay');toast(`Marked as ${ns}`,'✓');setTimeout(()=>openDetail(id),300);}catch(e){toast('Error','⚠️');}};
+window.deleteReport=async function(id){if(!confirm('Delete this report?'))return;try{await deleteDoc(doc(db,'reports',id));closeModal('detail-overlay');toast('Report deleted','🗑');}catch(e){toast('Error','⚠️');}};
 
 window.setFilter=function(val,btn){activeFilter=val;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));btn.classList.add('active');renderMarkers();renderSidebar();};
 window.showPage=function(page){currentPage=page;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(page+'-page').classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(page==='map')setTimeout(()=>map.invalidateSize(),50);if(page==='stats')renderStats();};
@@ -530,7 +798,9 @@ function pBadgeClass(p){return{'BJP':'party-BJP','INC':'party-INC','SS (UBT)':'p
 function partyInitials(p){return p.replace(/[^A-Z]/g,'').slice(0,3)||p.slice(0,2).toUpperCase();}
 let _tt;window.toast=function(msg,icon='✓'){const t=document.getElementById('toast');t.innerHTML=`<span>${icon}</span> ${msg}`;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),3000);};
 
+/* ── Boot ── */
 startListener();
+loadWardBoundaries();
 </script>
 </body>
 </html>
